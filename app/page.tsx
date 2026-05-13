@@ -38,6 +38,32 @@ const fallbackInsights = [
   "Creating HD-level response guidance...",
   "Constructing rapid recall prompts...",
   "Designing the one-page attack sheet...",
+  "Mapping lecturer emphasis into assessment strategy...",
+  "Organising your pack into premium learning components...",
+];
+
+const tutorInsightPool = [
+  "Students often lose marks by knowing the topic but missing the assessment angle.",
+  "Strong answers explain why a concept matters, not just what it means.",
+  "The best study packs reduce anxiety by separating core ideas from background detail.",
+  "Rapid recall prompts are being shaped into short, memorable revision triggers.",
+  "Common traps are being identified so you can avoid predictable mistakes.",
+  "HD-level responses usually connect theory, examples and critical evaluation.",
+  "Assessment hotspots help you decide where to focus your revision time.",
+  "Practice questions are being balanced across recall, explanation and application.",
+];
+
+const activityStream = [
+  "Analyzing lecturer emphasis...",
+  "Mapping high-yield concepts...",
+  "Detecting likely quiz areas...",
+  "Building tutor explanations...",
+  "Creating common trap warnings...",
+  "Generating rapid recall prompts...",
+  "Constructing HD insight cards...",
+  "Organising model answer structure...",
+  "Preparing assessment strategy...",
+  "Rendering premium PDF components...",
 ];
 
 function absoluteUrl(path?: string) {
@@ -51,6 +77,28 @@ function clampProgress(value?: number) {
   return Math.max(0, Math.min(100, value));
 }
 
+function estimatePages(progress: number, detected?: JobStatus["detected_sections"]) {
+  const base =
+    (detected?.expanded_notes || 0) +
+    (detected?.practice_questions || 0) +
+    (detected?.assessment_hotspots || 0);
+
+  if (base > 0) {
+    return Math.max(8, Math.min(42, Math.round(base * 1.25 + progress / 7)));
+  }
+
+  return Math.max(2, Math.min(32, Math.round(progress / 4)));
+}
+
+function estimateRemaining(progress: number, status?: string) {
+  if (status === "complete") return "Ready now";
+  if (progress < 15) return "About 1–3 minutes";
+  if (progress < 45) return "About 60–120 seconds";
+  if (progress < 75) return "About 45–90 seconds";
+  if (progress < 92) return "About 20–45 seconds";
+  return "Final rendering";
+}
+
 export default function Home() {
   const [subject, setSubject] = useState("");
   const [week, setWeek] = useState("");
@@ -61,9 +109,12 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [insightIndex, setInsightIndex] = useState(0);
+  const [activityIndex, setActivityIndex] = useState(0);
+  const [displayProgress, setDisplayProgress] = useState(0);
 
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
-  const progress = clampProgress(status?.progress);
+
+  const backendProgress = clampProgress(status?.progress);
 
   const isGenerating =
     status?.status === "queued" ||
@@ -74,31 +125,84 @@ export default function Home() {
   const isFailed = status?.status === "failed";
 
   const currentInsight = useMemo(() => {
-    if (status?.stage === "assessment_detection") {
-      return "Assessment themes, quiz pressure points and tutor priorities are being mapped.";
+    const stage = status?.stage;
+
+    const stageInsight =
+      stage === "assessment_detection"
+        ? "Assessment themes, quiz pressure points and tutor priorities are being mapped."
+        : stage === "tutor_engine"
+        ? "StudyPack is building tutor notes, common traps, rapid recall and HD insights."
+        : stage === "premium_sections"
+        ? "Premium learning components are being organised into a polished study system."
+        : stage === "preview_pdf"
+        ? "Your free preview is being prepared with locked premium sections."
+        : stage === "premium_pdf"
+        ? "The full premium PDF is being rendered with tutor-quality structure."
+        : fallbackInsights[insightIndex % fallbackInsights.length];
+
+    if (insightIndex % 3 === 2) {
+      return tutorInsightPool[insightIndex % tutorInsightPool.length];
     }
-    if (status?.stage === "tutor_engine") {
-      return "StudyPack is building tutor notes, common traps, rapid recall and HD insights.";
-    }
-    if (status?.stage === "premium_sections") {
-      return "Premium learning components are being organised into a polished study system.";
-    }
-    if (status?.stage === "preview_pdf") {
-      return "Your free preview is being prepared with locked premium sections.";
-    }
-    if (status?.stage === "premium_pdf") {
-      return "The full premium PDF is being rendered with tutor-quality structure.";
-    }
-    return fallbackInsights[insightIndex % fallbackInsights.length];
+
+    return stageInsight;
   }, [status?.stage, insightIndex]);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setInsightIndex((x) => x + 1);
-    }, 3200);
+    }, 3400);
 
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActivityIndex((x) => x + 1);
+    }, 2100);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!isGenerating && !isComplete) {
+      setDisplayProgress(0);
+      return;
+    }
+
+    if (isComplete) {
+      setDisplayProgress(100);
+      return;
+    }
+
+    setDisplayProgress((current) => {
+      if (backendProgress > current) return backendProgress;
+      return current;
+    });
+  }, [backendProgress, isGenerating, isComplete]);
+
+  useEffect(() => {
+    if (!isGenerating || isComplete || isFailed) return;
+
+    const timer = setInterval(() => {
+      setDisplayProgress((current) => {
+        const real = backendProgress;
+
+        if (current < real) {
+          return Math.min(real, current + 1.8);
+        }
+
+        const softCap = Math.min(96, real + 7);
+
+        if (current < softCap) {
+          return Math.min(softCap, current + 0.35);
+        }
+
+        return current;
+      });
+    }, 700);
+
+    return () => clearInterval(timer);
+  }, [backendProgress, isGenerating, isComplete, isFailed]);
 
   useEffect(() => {
     return () => {
@@ -144,6 +248,7 @@ export default function Home() {
 
     try {
       setIsSubmitting(true);
+      setDisplayProgress(3);
       setStatus({
         status: "queued",
         progress: 4,
@@ -208,10 +313,26 @@ export default function Home() {
     setStatus(null);
     setError("");
     setFiles([]);
+    setDisplayProgress(0);
   }
 
+  const progress = clampProgress(displayProgress);
   const completedSteps = status?.completed_steps || [];
   const detected = status?.detected_sections;
+  const pagesGenerated = estimatePages(progress, detected);
+  const remaining = estimateRemaining(progress, status?.status);
+  const activeActivity = activityStream[activityIndex % activityStream.length];
+
+  const generatedComponents = [
+    { label: "Assessment hotspots", unlocked: progress >= 42 },
+    { label: "Tutor explanations", unlocked: progress >= 52 },
+    { label: "Common traps", unlocked: progress >= 58 },
+    { label: "Rapid recall prompts", unlocked: progress >= 64 },
+    { label: "Quiz checks", unlocked: progress >= 72 },
+    { label: "HD insights", unlocked: progress >= 78 },
+    { label: "Attack sheet", unlocked: progress >= 84 },
+    { label: "Premium PDF render", unlocked: progress >= 94 },
+  ];
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#050816] text-white">
@@ -237,7 +358,7 @@ export default function Home() {
           </div>
         </header>
 
-        {!isGenerating && !isComplete && (
+        {!isGenerating && !isComplete && !isFailed && (
           <div className="grid flex-1 items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
             <div>
               <div className="mb-5 inline-flex rounded-full border border-indigo-400/30 bg-indigo-400/10 px-4 py-2 text-sm font-semibold text-indigo-100">
@@ -280,46 +401,34 @@ export default function Home() {
               </p>
 
               <div className="mt-6 space-y-4">
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                    Subject
-                  </label>
+                <Field label="Subject">
                   <input
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="e.g. CRIM324"
-                    className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white outline-none transition focus:border-indigo-300/60"
+                    className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white outline-none transition placeholder:text-white/25 focus:border-indigo-300/60"
                   />
-                </div>
+                </Field>
 
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                    Week
-                  </label>
+                <Field label="Week">
                   <input
                     value={week}
                     onChange={(e) => setWeek(e.target.value)}
                     placeholder="e.g. Week 9"
-                    className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white outline-none transition focus:border-indigo-300/60"
+                    className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white outline-none transition placeholder:text-white/25 focus:border-indigo-300/60"
                   />
-                </div>
+                </Field>
 
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                    Topic
-                  </label>
+                <Field label="Topic">
                   <input
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                     placeholder="e.g. Prison rights and OPCAT"
-                    className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white outline-none transition focus:border-indigo-300/60"
+                    className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white outline-none transition placeholder:text-white/25 focus:border-indigo-300/60"
                   />
-                </div>
+                </Field>
 
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                    Upload files
-                  </label>
+                <Field label="Upload files">
                   <input
                     type="file"
                     multiple
@@ -333,7 +442,7 @@ export default function Home() {
                       {files.length} file{files.length === 1 ? "" : "s"} selected
                     </div>
                   )}
-                </div>
+                </Field>
 
                 {error && (
                   <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100">
@@ -354,10 +463,10 @@ export default function Home() {
 
         {isGenerating && (
           <div className="flex flex-1 items-center justify-center">
-            <div className="w-full max-w-5xl rounded-[2.25rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl backdrop-blur-xl md:p-10">
+            <div className="w-full max-w-6xl rounded-[2.25rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl backdrop-blur-xl md:p-10">
               <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-center">
                 <div>
-                  <div className="mb-3 inline-flex rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-cyan-100">
+                  <div className="mb-3 inline-flex rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-cyan-100 shadow-[0_0_30px_rgba(103,232,249,0.15)]">
                     AI Tutor Engine Active
                   </div>
                   <h2 className="text-4xl font-black tracking-tight md:text-5xl">
@@ -369,23 +478,36 @@ export default function Home() {
                   </p>
                 </div>
 
-                <div className="rounded-3xl border border-white/10 bg-black/25 px-6 py-5 text-center">
-                  <div className="text-4xl font-black">{progress}%</div>
-                  <div className="mt-1 text-xs font-bold uppercase tracking-[0.2em] text-white/40">
-                    Complete
-                  </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <StatPill label="Complete" value={`${Math.round(progress)}%`} />
+                  <StatPill label="Pages" value={`${pagesGenerated}`} />
+                  <StatPill label="Time" value={remaining} />
                 </div>
               </div>
 
               <div className="relative mb-8 h-4 overflow-hidden rounded-full bg-white/10">
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 via-indigo-300 to-fuchsia-300 transition-all duration-700"
+                  className="absolute inset-y-0 left-0 overflow-hidden rounded-full bg-gradient-to-r from-cyan-300 via-indigo-300 to-fuchsia-300 transition-all duration-700"
                   style={{ width: `${progress}%` }}
-                />
+                >
+                  <div className="absolute inset-0 animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                </div>
                 <div className="absolute inset-0 animate-pulse bg-white/10" />
               </div>
 
-              <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+              <div className="mb-6 rounded-3xl border border-cyan-300/15 bg-cyan-300/10 p-4">
+                <div className="flex items-center gap-3 text-sm font-bold text-cyan-50">
+                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-300" />
+                  {activeActivity}
+                </div>
+                <p className="mt-2 text-xs leading-5 text-white/45">
+                  Premium StudyPacks take 1–3 minutes because the system is building
+                  tutor explanations, assessment strategy, recall tools and model answers —
+                  not just summarising files.
+                </p>
+              </div>
+
+              <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
                 <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
                   <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white/45">
                     Generation Steps
@@ -404,9 +526,14 @@ export default function Home() {
                       </div>
                     ))}
 
-                    <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm font-bold text-cyan-100">
+                    <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm font-bold text-cyan-100 shadow-[0_0_25px_rgba(103,232,249,0.08)]">
                       <span className="h-3 w-3 animate-pulse rounded-full bg-cyan-300" />
                       {status?.active_step || "Generating"}
+                      <span className="ml-auto flex gap-1">
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-200 [animation-delay:-0.3s]" />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-200 [animation-delay:-0.15s]" />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-200" />
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -416,36 +543,47 @@ export default function Home() {
                     Live Tutor Intelligence
                   </h3>
 
-                  <div className="mt-5 rounded-3xl border border-indigo-300/15 bg-indigo-300/10 p-5">
+                  <div className="mt-5 rounded-3xl border border-indigo-300/15 bg-indigo-300/10 p-5 transition-all duration-500">
                     <p className="text-lg font-bold leading-8 text-indigo-50">
                       {currentInsight}
                     </p>
                   </div>
 
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    {generatedComponents.map((item) => (
+                      <div
+                        key={item.label}
+                        className={
+                          item.unlocked
+                            ? "rounded-2xl border border-emerald-300/15 bg-emerald-300/10 p-4 text-emerald-50"
+                            : "rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-white/40"
+                        }
+                      >
+                        <div className="flex items-center gap-3 text-sm font-bold">
+                          <span
+                            className={
+                              item.unlocked
+                                ? "flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-xs font-black text-black"
+                                : "h-2.5 w-2.5 rounded-full bg-white/25"
+                            }
+                          >
+                            {item.unlocked ? "✓" : ""}
+                          </span>
+                          {item.label}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
                   {detected && (
                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                      <Metric
-                        label="Hotspots"
-                        value={detected.assessment_hotspots}
-                      />
+                      <Metric label="Hotspots" value={detected.assessment_hotspots} />
                       <Metric label="Tutor Notes" value={detected.expanded_notes} />
                       <Metric label="Quiz Checks" value={detected.quiz_checks} />
-                      <Metric
-                        label="Practice Questions"
-                        value={detected.practice_questions}
-                      />
-                      <Metric
-                        label="Attack Sheet Points"
-                        value={detected.attack_sheet_points}
-                      />
+                      <Metric label="Practice Questions" value={detected.practice_questions} />
+                      <Metric label="Attack Sheet Points" value={detected.attack_sheet_points} />
                     </div>
                   )}
-
-                  <p className="mt-5 text-sm leading-6 text-white/45">
-                    Premium packs take longer because StudyPack is building structured
-                    explanations, assessment strategy, recall tools and model answers —
-                    not just summarising your files.
-                  </p>
                 </div>
               </div>
             </div>
@@ -511,7 +649,35 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      <style jsx global>{`
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-120%);
+          }
+          100% {
+            transform: translateX(120%);
+          }
+        }
+      `}</style>
     </main>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+        {label}
+      </label>
+      {children}
+    </div>
   );
 }
 
@@ -526,6 +692,23 @@ function Metric({
     <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
       <div className="text-2xl font-black">{value ?? 0}</div>
       <div className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-white/40">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function StatPill({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-black/25 px-5 py-4 text-center shadow-xl">
+      <div className="text-2xl font-black md:text-3xl">{value}</div>
+      <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
         {label}
       </div>
     </div>
