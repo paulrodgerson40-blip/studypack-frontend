@@ -127,6 +127,9 @@ export default function Home() {
   const [activityIndex, setActivityIndex] = useState(0);
 
   const pollRef = useRef<NodeJS.Timeout | null>(null);
+  const elapsedStartRef = useRef<number | null>(null);
+  const elapsedFinalRef = useRef<number | null>(null);
+
 
   const selectedTotalBytes = useMemo(
     () => files.reduce((sum, f) => sum + f.size, 0),
@@ -206,11 +209,26 @@ export default function Home() {
   useEffect(() => {
     if (!isGenerating) return;
 
-    const t = setInterval(() => {
-      setElapsed((x) => x + 1);
-    }, 1000);
+    const syncElapsed = () => {
+      const startedAt = elapsedStartRef.current;
+      if (!startedAt) return;
 
-    return () => clearInterval(t);
+      const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+      setElapsed(seconds);
+    };
+
+    syncElapsed();
+
+    const t = setInterval(syncElapsed, 500);
+
+    window.addEventListener("focus", syncElapsed);
+    document.addEventListener("visibilitychange", syncElapsed);
+
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("focus", syncElapsed);
+      document.removeEventListener("visibilitychange", syncElapsed);
+    };
   }, [isGenerating]);
 
   useEffect(() => {
@@ -263,7 +281,19 @@ export default function Home() {
       }
 
       if (data.status === "complete" || data.status === "failed") {
-        if (pollRef.current) clearInterval(pollRef.current);
+        if (elapsedStartRef.current) {
+          const finalElapsed = Math.max(
+            0,
+            Math.floor((Date.now() - elapsedStartRef.current) / 1000)
+          );
+          elapsedFinalRef.current = finalElapsed;
+          setElapsed(finalElapsed);
+        }
+
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
       }
     } catch (e) {
       console.error(e);
@@ -291,6 +321,9 @@ export default function Home() {
     }
 
     try {
+      const startedAt = Date.now();
+      elapsedStartRef.current = startedAt;
+      elapsedFinalRef.current = null;
       setElapsed(0);
       setDisplayProgress(4);
       setIsSubmitting(true);
@@ -344,9 +377,12 @@ export default function Home() {
 
       poll(id);
     } catch (err: any) {
+      elapsedStartRef.current = null;
+      elapsedFinalRef.current = null;
       setIsSubmitting(false);
       setStatus(null);
       setDisplayProgress(0);
+      setElapsed(0);
       setError(err?.message || "Something went wrong.");
     }
   }
@@ -357,6 +393,8 @@ export default function Home() {
       pollRef.current = null;
     }
 
+    elapsedStartRef.current = null;
+    elapsedFinalRef.current = null;
     setStatus(null);
     setDisplayProgress(0);
     setElapsed(0);
