@@ -434,28 +434,30 @@ export default function Home() {
 
       <section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-8 md:px-10">
         <header className="mb-10 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img
-              src="/studypack-icon.png"
-              alt="StudyPack.ai"
-              className="h-10 w-10 rounded-xl object-contain shadow-[0_0_26px_rgba(99,102,241,0.22)]"
-            />
+  <div className="flex items-center gap-5">
 
-            <div>
-              <div className="text-[15px] font-black uppercase tracking-[0.3em] text-white/75">
-                StudyPack.ai
-              </div>
+    <img
+      src="/studypack-icon.png"
+      alt="StudyPack.ai"
+      className="h-16 w-16 rounded-2xl shadow-[0_0_30px_rgba(99,102,241,0.22)]"
+    />
 
-              <div className="mt-1.5 text-xs font-medium text-white/38">
-                Premium AI tutor-grade university study packs
-              </div>
-            </div>
-          </div>
+    <div>
+      <div className="text-[16px] font-black uppercase tracking-[0.42em] text-white/90">
+        STUDYPACK.AI
+      </div>
 
-          <div className="hidden rounded-full border border-white/10 bg-white/[0.045] px-4 py-2 text-xs font-bold text-white/62 backdrop-blur md:block">
-            {API_VERSION}
-          </div>
-        </header>
+      <div className="mt-1 text-sm font-medium text-white/35">
+        Premium AI tutor-grade university study packs
+      </div>
+    </div>
+
+  </div>
+
+  <div className="hidden rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-bold text-white/70 backdrop-blur md:block">
+    {API_VERSION}
+  </div>
+</header>
 
         {!isGenerating && !isComplete && !isFailed && (
           <div className="grid flex-1 items-center gap-10 lg:grid-cols-[1.08fr_0.92fr]">
