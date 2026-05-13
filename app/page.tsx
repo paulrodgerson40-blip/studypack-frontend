@@ -12,6 +12,8 @@ type JobStatus = {
   status?: "queued" | "processing" | "complete" | "failed" | string;
   progress?: number;
   message?: string;
+  error?: string;
+  detail?: any;
   stage?: string;
   stage_title?: string;
   stage_detail?: string;
@@ -28,26 +30,33 @@ type JobStatus = {
   };
 };
 
-const API_VERSION = "AI Tutor Engine V10";
+const API_VERSION = "StudyPack.ai Engine V31";
+
+const MAX_FILES = 2;
+const MAX_FILE_MB = 15;
+const MAX_TOTAL_MB = 25;
+const MAX_EXTRACTED_WORDS = 35000;
+
+const acceptedExtensions = [".pdf", ".docx", ".pptx", ".txt"];
 
 const rotatingInsights = [
   "Analyzing lecturer emphasis and assessment weighting...",
-  "Constructing tutor-style explanations and HD insight systems...",
-  "Building rapid recall triggers for quiz and tutorial performance...",
+  "Building tutor-style explanations from your weekly material...",
+  "Creating assessment-focused model answers and critical debates...",
   "Mapping common student traps and likely misunderstandings...",
-  "Designing the premium attack sheet and final cram system...",
-  "Generating assessment-focused tutor intelligence...",
+  "Designing rapid recall, revision and final cram systems...",
+  "Turning lecture content into a premium StudyPack.ai guide...",
 ];
 
 const activityFeed = [
   "Scanning uploaded material...",
+  "Checking upload quality...",
+  "Extracting lecture content...",
   "Detecting high-yield concepts...",
   "Building tutor explanations...",
-  "Generating common traps...",
-  "Constructing quiz checks...",
-  "Creating rapid recall prompts...",
-  "Building HD insight cards...",
-  "Finalizing premium render...",
+  "Creating model answers...",
+  "Rendering premium PDF...",
+  "Building locked free preview...",
 ];
 
 function clamp(n?: number) {
@@ -73,6 +82,37 @@ function absoluteUrl(path?: string) {
   return `${API_BASE}${path}`;
 }
 
+function fileExt(name: string) {
+  const lower = name.toLowerCase();
+  const dot = lower.lastIndexOf(".");
+  return dot >= 0 ? lower.slice(dot) : "";
+}
+
+function formatMb(bytes: number) {
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+}
+
+function extractFriendlyError(data: any, fallback: string) {
+  if (!data) return fallback;
+
+  if (typeof data?.detail === "string") return data.detail;
+
+  if (data?.detail?.message) {
+    const parts = [
+      data.detail.message,
+      data.detail.detail,
+      data.detail.guidance,
+    ].filter(Boolean);
+
+    return parts.join("\n\n");
+  }
+
+  if (data?.message) return data.message;
+  if (data?.error) return data.error;
+
+  return fallback;
+}
+
 export default function Home() {
   const [subject, setSubject] = useState("");
   const [week, setWeek] = useState("");
@@ -87,6 +127,55 @@ export default function Home() {
   const [activityIndex, setActivityIndex] = useState(0);
 
   const pollRef = useRef<NodeJS.Timeout | null>(null);
+
+  const selectedTotalBytes = useMemo(
+    () => files.reduce((sum, f) => sum + f.size, 0),
+    [files]
+  );
+
+  const fileWarnings = useMemo(() => {
+    const warnings: string[] = [];
+
+    if (files.length > MAX_FILES) {
+      warnings.push(
+        `Please upload up to ${MAX_FILES} focused weekly files only. Recommended: transcript + slides.`
+      );
+    }
+
+    if (selectedTotalBytes > MAX_TOTAL_MB * 1024 * 1024) {
+      warnings.push(
+        `Total upload is ${formatMb(
+          selectedTotalBytes
+        )}. Current limit is ${MAX_TOTAL_MB}MB total.`
+      );
+    }
+
+    files.forEach((f) => {
+      const ext = fileExt(f.name);
+      if (!acceptedExtensions.includes(ext)) {
+        warnings.push(
+          `${f.name} is not supported. Use PDF, DOCX, PPTX or TXT.`
+        );
+      }
+
+      if (f.size > MAX_FILE_MB * 1024 * 1024) {
+        warnings.push(
+          `${f.name} is ${formatMb(
+            f.size
+          )}. Each file must be ${MAX_FILE_MB}MB or less.`
+        );
+      }
+    });
+
+    return warnings;
+  }, [files, selectedTotalBytes]);
+
+  const canSubmit =
+    !!subject.trim() &&
+    !!week.trim() &&
+    files.length > 0 &&
+    fileWarnings.length === 0 &&
+    !isSubmitting;
 
   const isGenerating =
     status?.status === "queued" ||
@@ -161,14 +250,17 @@ export default function Home() {
 
   async function poll(jobId: string) {
     try {
-      const res = await fetch(
-        `${API_BASE}/api/studypack/status/${jobId}`,
-        { cache: "no-store" }
-      );
+      const res = await fetch(`${API_BASE}/api/studypack/status/${jobId}`, {
+        cache: "no-store",
+      });
 
       const data = await res.json();
 
       setStatus(data);
+
+      if (data.status === "failed") {
+        setError(extractFriendlyError(data, "StudyPack generation failed."));
+      }
 
       if (data.status === "complete" || data.status === "failed") {
         if (pollRef.current) clearInterval(pollRef.current);
@@ -184,12 +276,17 @@ export default function Home() {
     setError("");
 
     if (!subject.trim() || !week.trim()) {
-      setError("Please enter subject and week.");
+      setError("Please enter your subject and week.");
       return;
     }
 
     if (!files.length) {
-      setError("Please upload at least one file.");
+      setError("Please upload your weekly lecture transcript. You can also include lecture slides if you have them.");
+      return;
+    }
+
+    if (fileWarnings.length) {
+      setError(fileWarnings.join("\n\n"));
       return;
     }
 
@@ -201,9 +298,9 @@ export default function Home() {
       setStatus({
         status: "queued",
         progress: 4,
-        stage_title: "Initializing AI Tutor Engine",
+        stage_title: "Preparing your StudyPack",
         stage_detail:
-          "Preparing your files for premium tutor-level analysis.",
+          "Checking your upload and preparing your weekly material for tutor-level analysis.",
         completed_steps: [],
         active_step: "Uploading files",
       });
@@ -216,20 +313,30 @@ export default function Home() {
 
       files.forEach((f) => fd.append("files", f));
 
-      const res = await fetch(
-        `${API_BASE}/api/studypack/generate`,
-        {
-          method: "POST",
-          body: fd,
-        }
-      );
+      const res = await fetch(`${API_BASE}/api/studypack/generate`, {
+        method: "POST",
+        body: fd,
+      });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(
+          extractFriendlyError(
+            data,
+            "This upload could not be processed. Please use a focused weekly lecture transcript and optional lecture slides."
+          )
+        );
+      }
 
       setStatus(data);
       setIsSubmitting(false);
 
       const id = data.job_id;
+
+      if (!id) {
+        throw new Error("StudyPack started, but no job ID was returned.");
+      }
 
       pollRef.current = setInterval(() => {
         poll(id);
@@ -238,6 +345,8 @@ export default function Home() {
       poll(id);
     } catch (err: any) {
       setIsSubmitting(false);
+      setStatus(null);
+      setDisplayProgress(0);
       setError(err?.message || "Something went wrong.");
     }
   }
@@ -258,68 +367,60 @@ export default function Home() {
 
   const generatedComponents = [
     {
-      label: "Assessment Hotspots",
+      label: "Upload Quality Check",
+      active: displayProgress >= 22,
+    },
+    {
+      label: "Assessment Focus",
       active: displayProgress >= 35,
     },
     {
-      label: "Tutor Explanations",
+      label: "Tutor Notes",
       active: displayProgress >= 48,
     },
     {
-      label: "Common Traps",
-      active: displayProgress >= 58,
+      label: "Critical Debates",
+      active: displayProgress >= 60,
     },
     {
       label: "Rapid Recall",
-      active: displayProgress >= 67,
+      active: displayProgress >= 70,
     },
     {
-      label: "Quiz Checks",
-      active: displayProgress >= 76,
-    },
-    {
-      label: "HD Insights",
+      label: "Model Answers",
       active: displayProgress >= 83,
     },
     {
-      label: "Attack Sheet",
-      active: displayProgress >= 92,
+      label: "Locked Preview",
+      active: displayProgress >= 94,
     },
   ];
 
-  const pagesEstimate = Math.max(
-    8,
-    Math.round(displayProgress / 3.1)
-  );
+  const pagesEstimate = Math.max(8, Math.round(displayProgress / 3.1));
 
   const detected = status?.detected_sections;
 
   const liveInsight =
     rotatingInsights[insightIndex % rotatingInsights.length];
 
-  const liveActivity =
-    activityFeed[activityIndex % activityFeed.length];
+  const liveActivity = activityFeed[activityIndex % activityFeed.length];
 
   const metrics = [
     {
       label: "Hotspots",
-      value:
-        detected?.assessment_hotspots?.toString() || "—",
+      value: detected?.assessment_hotspots?.toString() || "—",
     },
     {
       label: "Tutor Notes",
-      value:
-        detected?.expanded_notes?.toString() || "—",
+      value: detected?.expanded_notes?.toString() || "—",
     },
     {
       label: "Quiz Checks",
-      value:
-        detected?.quiz_checks?.toString() || "—",
+      value: detected?.quiz_checks?.toString() || "—",
     },
     {
       label: "Practice Qs",
-      value:
-        detected?.practice_questions?.toString() || "—",
+      value: detected?.practice_questions?.toString() || "—",
     },
   ];
 
@@ -360,17 +461,14 @@ export default function Home() {
               </h1>
 
               <p className="mt-7 max-w-2xl text-lg leading-8 text-white/60">
-                Upload lecture PDFs, transcripts or slides and
-                generate premium tutor-style study packs with
-                assessment hotspots, rapid recall, common traps,
-                HD insights and one-page attack sheets.
+                Upload your weekly lecture transcript and lecture slides to create a premium tutor-style StudyPack with assessment focus, deep explanations, rapid revision and model answers.
               </p>
 
               <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
                 {[
-                  "Assessment Intelligence",
+                  "Focused Weekly Uploads",
                   "Tutor-Level Explanations",
-                  "Premium Revision System",
+                  "Premium Locked Preview",
                 ].map((x) => (
                   <div
                     key={x}
@@ -380,28 +478,35 @@ export default function Home() {
                   </div>
                 ))}
               </div>
+
+              <div className="mt-6 max-w-3xl rounded-3xl border border-orange-300/15 bg-orange-300/10 p-5">
+                <div className="text-sm font-black uppercase tracking-[0.2em] text-orange-100/80">
+                  Best Results
+                </div>
+                <p className="mt-2 text-sm leading-6 text-white/65">
+                  Smaller focused uploads produce better StudyPacks. Use one week at a time: lecture transcript first, lecture slides if available.
+                </p>
+              </div>
             </div>
 
             <form
               onSubmit={handleSubmit}
               className="rounded-[2rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl backdrop-blur-xl md:p-8"
             >
-              <h2 className="text-3xl font-black">
-                Create StudyPack
-              </h2>
+              <h2 className="text-3xl font-black">Create StudyPack</h2>
 
               <p className="mt-2 text-sm text-white/50">
-                Topic detection is automatic.
+                Topic detection is automatic. Focused weekly uploads create the best results.
               </p>
+
+              <UploadGuidance />
 
               <div className="mt-6 space-y-4">
                 <Field label="Subject">
                   <input
                     value={subject}
-                    onChange={(e) =>
-                      setSubject(e.target.value)
-                    }
-                    placeholder="e.g. CRIM324"
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="e.g. CRIM335 or LAW399"
                     className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/25 focus:border-cyan-300/50"
                   />
                 </Field>
@@ -409,10 +514,8 @@ export default function Home() {
                 <Field label="Week">
                   <input
                     value={week}
-                    onChange={(e) =>
-                      setWeek(e.target.value)
-                    }
-                    placeholder="e.g. Week 8"
+                    onChange={(e) => setWeek(e.target.value)}
+                    placeholder="e.g. Week 3"
                     className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/25 focus:border-cyan-300/50"
                   />
                 </Field>
@@ -420,46 +523,65 @@ export default function Home() {
                 <Field label="Topic override (optional)">
                   <input
                     value={topic}
-                    onChange={(e) =>
-                      setTopic(e.target.value)
-                    }
+                    onChange={(e) => setTopic(e.target.value)}
                     placeholder="Leave blank for auto-detection"
                     className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/25 focus:border-cyan-300/50"
                   />
                 </Field>
 
-                <Field label="Upload lecture files">
+                <Field label="Upload weekly study files">
                   <input
                     type="file"
                     multiple
-                    accept=".pdf,.txt,.pptx"
-                    onChange={(e) =>
-                      setFiles(
-                        Array.from(e.target.files || [])
-                      )
-                    }
+                    accept=".pdf,.txt,.pptx,.docx"
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.files || []);
+                      setFiles(selected);
+                      setError("");
+                    }}
                     className="w-full cursor-pointer rounded-2xl border border-dashed border-white/15 bg-black/20 px-4 py-5 text-sm text-white/70 file:mr-4 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-bold file:text-black"
                   />
 
+                  <div className="mt-3 text-xs leading-5 text-white/40">
+                    Accepted: PDF, DOCX, PPTX, TXT. Up to {MAX_FILES} files, {MAX_FILE_MB}MB per file, {MAX_TOTAL_MB}MB total.
+                  </div>
+
                   {!!files.length && (
-                    <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs text-white/50">
-                      {files.length} file
-                      {files.length !== 1 ? "s" : ""} selected
+                    <SelectedFiles files={files} totalBytes={selectedTotalBytes} />
+                  )}
+
+                  {!!fileWarnings.length && (
+                    <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-sm leading-6 text-amber-50">
+                      <div className="font-black">Upload needs adjustment</div>
+                      <ul className="mt-2 list-disc space-y-1 pl-5">
+                        {fileWarnings.map((w) => (
+                          <li key={w}>{w}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </Field>
 
                 {error && (
-                  <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-100">
+                  <div className="whitespace-pre-line rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm leading-6 text-red-100">
                     {error}
                   </div>
                 )}
 
-                <button className="w-full rounded-2xl bg-white px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-black transition hover:scale-[1.01]">
-                  {isSubmitting
-                    ? "Starting..."
-                    : "Generate StudyPack"}
+                <button
+                  disabled={!canSubmit}
+                  className={
+                    canSubmit
+                      ? "w-full rounded-2xl bg-white px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-black transition hover:scale-[1.01]"
+                      : "w-full cursor-not-allowed rounded-2xl bg-white/25 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-white/40"
+                  }
+                >
+                  {isSubmitting ? "Starting..." : "Generate StudyPack"}
                 </button>
+
+                <p className="text-center text-xs leading-5 text-white/35">
+                  Free preview includes the opening pages plus a locked upgrade page. Full StudyPacks require credits.
+                </p>
               </div>
             </form>
           </div>
@@ -471,12 +593,11 @@ export default function Home() {
               <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="mb-3 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-cyan-100">
-                    AI Tutor Engine Active
+                    StudyPack Engine Active
                   </div>
 
                   <h2 className="text-4xl font-black tracking-tight md:text-5xl">
-                    {status?.stage_title ||
-                      "Building your StudyPack"}
+                    {status?.stage_title || "Building your StudyPack"}
                   </h2>
 
                   <p className="mt-3 max-w-2xl text-base leading-7 text-white/55">
@@ -491,15 +612,9 @@ export default function Home() {
                     value={`${Math.round(displayProgress)}%`}
                   />
 
-                  <MetricPill
-                    label="Pages"
-                    value={`${pagesEstimate}`}
-                  />
+                  <MetricPill label="Pages" value={`${pagesEstimate}`} />
 
-                  <MetricPill
-                    label="Elapsed"
-                    value={formatElapsed(elapsed)}
-                  />
+                  <MetricPill label="Elapsed" value={formatElapsed(elapsed)} />
                 </div>
               </div>
 
@@ -517,15 +632,11 @@ export default function Home() {
               <div className="mb-7 rounded-3xl border border-cyan-300/15 bg-cyan-300/10 p-4">
                 <div className="flex items-center gap-3 text-sm font-bold text-cyan-50">
                   <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-300" />
-                  {liveActivity}
+                  {status?.message || liveActivity}
                 </div>
 
                 <p className="mt-2 text-xs leading-5 text-white/45">
-                  Premium StudyPacks usually take 1–5 minutes
-                  because the system is building tutor-level
-                  explanations, assessment strategy, rapid
-                  recall systems and model answers — not just
-                  summarizing notes.
+                  Premium StudyPacks usually take 1–5 minutes because the system is building tutor-level explanations, assessment strategy, rapid recall systems and model answers — not just summarizing notes.
                 </p>
               </div>
 
@@ -536,26 +647,23 @@ export default function Home() {
                   </div>
 
                   <div className="space-y-3">
-                    {(status?.completed_steps || []).map(
-                      (step) => (
-                        <div
-                          key={step}
-                          className="flex items-center gap-3 rounded-2xl border border-emerald-300/15 bg-emerald-300/10 px-4 py-3 text-sm text-emerald-100"
-                        >
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-xs font-black text-black">
-                            ✓
-                          </span>
+                    {(status?.completed_steps || []).map((step) => (
+                      <div
+                        key={step}
+                        className="flex items-center gap-3 rounded-2xl border border-emerald-300/15 bg-emerald-300/10 px-4 py-3 text-sm text-emerald-100"
+                      >
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-xs font-black text-black">
+                          ✓
+                        </span>
 
-                          {step}
-                        </div>
-                      )
-                    )}
+                        {step}
+                      </div>
+                    ))}
 
                     <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm font-bold text-cyan-100">
                       <span className="h-3 w-3 animate-pulse rounded-full bg-cyan-300" />
 
-                      {status?.active_step ||
-                        "Generating"}
+                      {status?.active_step || "Generating"}
 
                       <span className="ml-auto flex gap-1">
                         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-200 [animation-delay:-0.3s]" />
@@ -619,9 +727,7 @@ export default function Home() {
                           key={x.label}
                           className="rounded-2xl border border-white/10 bg-black/20 p-4"
                         >
-                          <div className="text-3xl font-black">
-                            {x.value}
-                          </div>
+                          <div className="text-3xl font-black">{x.value}</div>
 
                           <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
                             {x.label}
@@ -633,14 +739,11 @@ export default function Home() {
 
                   <div className="mt-7 rounded-3xl border border-fuchsia-300/10 bg-gradient-to-br from-fuchsia-500/10 to-cyan-500/10 p-5">
                     <div className="text-xs font-black uppercase tracking-[0.2em] text-white/40">
-                      Premium Build Process
+                      Preview and Premium
                     </div>
 
                     <div className="mt-3 text-lg font-bold leading-8 text-white">
-                      StudyPack is generating a structured
-                      tutor-grade learning system designed to
-                      improve assessment performance — not just
-                      summarise files.
+                      The premium StudyPack is created first. The free preview is then built from the same PDF, so both versions always match.
                     </div>
                   </div>
                 </div>
@@ -658,9 +761,7 @@ export default function Home() {
                     ✓
                   </div>
 
-                  <h2 className="text-5xl font-black">
-                    StudyPack Ready
-                  </h2>
+                  <h2 className="text-5xl font-black">StudyPack Ready</h2>
 
                   <p className="mx-auto mt-4 max-w-xl text-white/60">
                     Completed in{" "}
@@ -671,23 +772,23 @@ export default function Home() {
 
                   <div className="mt-8 grid gap-4 sm:grid-cols-2">
                     <a
-                      href={absoluteUrl(
-                        status?.preview_download_url
-                      )}
+                      href={absoluteUrl(status?.preview_download_url)}
                       className="rounded-2xl border border-white/10 bg-white/10 px-5 py-4 text-sm font-black text-white transition hover:bg-white/15"
                     >
-                      Download Preview
+                      Download Free Preview
                     </a>
 
                     <a
-                      href={absoluteUrl(
-                        status?.premium_download_url
-                      )}
+                      href={absoluteUrl(status?.premium_download_url)}
                       className="rounded-2xl bg-white px-5 py-4 text-sm font-black text-black transition hover:scale-[1.01]"
                     >
-                      Download Premium
+                      Unlock Premium
                     </a>
                   </div>
+
+                  <p className="mx-auto mt-4 max-w-xl text-xs leading-5 text-white/40">
+                    Free preview shows the opening pages and a locked premium page. Full premium access will be connected to credits in the next release.
+                  </p>
 
                   <button
                     onClick={resetToStart}
@@ -702,13 +803,20 @@ export default function Home() {
                     !
                   </div>
 
-                  <h2 className="text-4xl font-black">
-                    Generation Failed
-                  </h2>
+                  <h2 className="text-4xl font-black">Generation Failed</h2>
 
-                  <p className="mx-auto mt-4 max-w-xl text-white/60">
-                    Please try again.
+                  <p className="mx-auto mt-4 whitespace-pre-line text-left text-sm leading-6 text-white/65">
+                    {error ||
+                      status?.message ||
+                      "Please check your upload and try again with a focused weekly lecture transcript and optional slides."}
                   </p>
+
+                  <button
+                    onClick={resetToStart}
+                    className="mt-7 w-full rounded-2xl bg-white px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-black transition hover:scale-[1.01]"
+                  >
+                    Back to Upload
+                  </button>
                 </>
               )}
             </div>
@@ -728,6 +836,70 @@ export default function Home() {
         }
       `}</style>
     </main>
+  );
+}
+
+function UploadGuidance() {
+  return (
+    <div className="mt-5 rounded-3xl border border-white/10 bg-black/20 p-4">
+      <div className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-white/40">
+        Upload Guide
+      </div>
+
+      <div className="grid gap-3 text-sm md:grid-cols-2">
+        <div className="rounded-2xl border border-emerald-300/15 bg-emerald-300/10 p-4">
+          <div className="font-black text-emerald-100">Upload</div>
+          <ul className="mt-2 space-y-1 text-emerald-50/85">
+            <li>✓ Weekly lecture transcript</li>
+            <li>✓ Lecture slides, if available</li>
+          </ul>
+        </div>
+
+        <div className="rounded-2xl border border-red-300/15 bg-red-300/10 p-4">
+          <div className="font-black text-red-100">Avoid</div>
+          <ul className="mt-2 space-y-1 text-red-50/85">
+            <li>✗ Textbooks</li>
+            <li>✗ Full semester folders</li>
+            <li>✗ Unrelated readings</li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/10 p-3 text-xs leading-5 text-cyan-50/85">
+        Limits: up to {MAX_FILES} files, {MAX_FILE_MB}MB per file, {MAX_TOTAL_MB}MB total, and approximately {MAX_EXTRACTED_WORDS.toLocaleString()} extracted words. These limits protect quality and keep StudyPacks focused.
+      </div>
+    </div>
+  );
+}
+
+function SelectedFiles({
+  files,
+  totalBytes,
+}: {
+  files: File[];
+  totalBytes: number;
+}) {
+  return (
+    <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs text-white/55">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span>
+          {files.length} file{files.length !== 1 ? "s" : ""} selected
+        </span>
+        <span>{formatMb(totalBytes)} total</span>
+      </div>
+
+      <div className="space-y-2">
+        {files.map((f) => (
+          <div
+            key={`${f.name}-${f.size}`}
+            className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.04] px-3 py-2"
+          >
+            <span className="truncate">{f.name}</span>
+            <span className="shrink-0 text-white/35">{formatMb(f.size)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -758,9 +930,7 @@ function MetricPill({
 }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-black/25 px-5 py-4 text-center">
-      <div className="text-3xl font-black">
-        {value}
-      </div>
+      <div className="text-3xl font-black">{value}</div>
 
       <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
         {label}
