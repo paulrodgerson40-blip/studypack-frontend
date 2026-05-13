@@ -30,7 +30,7 @@ type JobStatus = {
   error?: string;
 };
 
-const API_VERSION_LABEL = "AI Tutor Engine V8";
+const API_VERSION_LABEL = "AI Tutor Engine V9";
 
 const fallbackInsights = [
   "Detecting high-yield assessment themes...",
