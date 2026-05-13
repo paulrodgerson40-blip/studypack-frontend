@@ -21,6 +21,11 @@ type JobStatus = {
   active_step?: string;
   preview_download_url?: string;
   premium_download_url?: string;
+  started_at?: string | number;
+  created_at?: string | number;
+  updated_at?: string | number;
+  completed_at?: string | number;
+  finished_at?: string | number;
   detected_sections?: {
     assessment_hotspots?: number;
     expanded_notes?: number;
@@ -76,6 +81,42 @@ function formatElapsed(seconds: number) {
   return `${mins}:${secs}`;
 }
 
+
+function timestampToMs(value?: string | number | null) {
+  if (!value) return null;
+
+  if (typeof value === "number") {
+    // Support both Unix seconds and JavaScript milliseconds.
+    return value < 10_000_000_000 ? value * 1000 : value;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function getStatusStartMs(data?: JobStatus | null) {
+  return (
+    timestampToMs(data?.started_at) ||
+    timestampToMs(data?.created_at) ||
+    null
+  );
+}
+
+function getStatusEndMs(data?: JobStatus | null) {
+  return (
+    timestampToMs(data?.completed_at) ||
+    timestampToMs(data?.finished_at) ||
+    timestampToMs(data?.updated_at) ||
+    null
+  );
+}
+
+function elapsedSecondsFrom(startMs: number | null, endMs?: number | null) {
+  if (!startMs) return 0;
+  const effectiveEnd = endMs || Date.now();
+  return Math.max(0, Math.floor((effectiveEnd - startMs) / 1000));
+}
+
 function absoluteUrl(path?: string) {
   if (!path) return "#";
   if (path.startsWith("http")) return path;
@@ -127,9 +168,8 @@ export default function Home() {
   const [activityIndex, setActivityIndex] = useState(0);
 
   const pollRef = useRef<NodeJS.Timeout | null>(null);
-  const elapsedStartRef = useRef<number | null>(null);
-  const elapsedFinalRef = useRef<number | null>(null);
-
+  const startedAtRef = useRef<number | null>(null);
+  const finalElapsedRef = useRef<number | null>(null);
 
   const selectedTotalBytes = useMemo(
     () => files.reduce((sum, f) => sum + f.size, 0),
@@ -209,27 +249,28 @@ export default function Home() {
   useEffect(() => {
     if (!isGenerating) return;
 
-    const syncElapsed = () => {
-      const startedAt = elapsedStartRef.current;
-      if (!startedAt) return;
+    if (!startedAtRef.current) {
+      startedAtRef.current = getStatusStartMs(status) || Date.now();
+    }
 
-      const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
-      setElapsed(seconds);
+    const syncElapsed = () => {
+      setElapsed(elapsedSecondsFrom(startedAtRef.current));
     };
 
     syncElapsed();
 
-    const t = setInterval(syncElapsed, 500);
+    const t = window.setInterval(syncElapsed, 1000);
 
-    window.addEventListener("focus", syncElapsed);
-    document.addEventListener("visibilitychange", syncElapsed);
+    const onVisibleOrFocused = () => syncElapsed();
+    window.addEventListener("focus", onVisibleOrFocused);
+    document.addEventListener("visibilitychange", onVisibleOrFocused);
 
     return () => {
-      clearInterval(t);
-      window.removeEventListener("focus", syncElapsed);
-      document.removeEventListener("visibilitychange", syncElapsed);
+      window.clearInterval(t);
+      window.removeEventListener("focus", onVisibleOrFocused);
+      document.removeEventListener("visibilitychange", onVisibleOrFocused);
     };
-  }, [isGenerating]);
+  }, [isGenerating, status?.started_at, status?.created_at]);
 
   useEffect(() => {
     if (isComplete) {
@@ -239,25 +280,28 @@ export default function Home() {
 
     if (!isGenerating) return;
 
-    const t = setInterval(() => {
+    // Keep progress honest: it follows backend progress and only smooths gently.
+    // It no longer drifts up to the 90s while the backend is still on an earlier stage.
+    const t = window.setInterval(() => {
       setDisplayProgress((current) => {
-        const real = backendProgress;
+        const real = backendProgress || 4;
 
-        if (current < real) {
-          return Math.min(real, current + 1.5);
+        if (real >= current) {
+          return Math.min(real, current + 2);
         }
 
-        const softCap = Math.min(96, real + 7);
+        // Allow only a tiny visual lead so the UI feels alive without lying.
+        const softCap = Math.min(94, real + 3);
 
         if (current < softCap) {
-          return Math.min(softCap, current + 0.22);
+          return Math.min(softCap, current + 0.12);
         }
 
         return current;
       });
     }, 700);
 
-    return () => clearInterval(t);
+    return () => window.clearInterval(t);
   }, [backendProgress, isGenerating, isComplete]);
 
   useEffect(() => {
@@ -274,6 +318,11 @@ export default function Home() {
 
       const data = await res.json();
 
+      const serverStartMs = getStatusStartMs(data);
+      if (serverStartMs && !startedAtRef.current) {
+        startedAtRef.current = serverStartMs;
+      }
+
       setStatus(data);
 
       if (data.status === "failed") {
@@ -281,14 +330,14 @@ export default function Home() {
       }
 
       if (data.status === "complete" || data.status === "failed") {
-        if (elapsedStartRef.current) {
-          const finalElapsed = Math.max(
-            0,
-            Math.floor((Date.now() - elapsedStartRef.current) / 1000)
-          );
-          elapsedFinalRef.current = finalElapsed;
-          setElapsed(finalElapsed);
-        }
+        const endMs = getStatusEndMs(data) || Date.now();
+        const finalElapsed = elapsedSecondsFrom(
+          startedAtRef.current || serverStartMs || endMs,
+          endMs
+        );
+
+        finalElapsedRef.current = finalElapsed;
+        setElapsed(finalElapsed);
 
         if (pollRef.current) {
           clearInterval(pollRef.current);
@@ -321,9 +370,10 @@ export default function Home() {
     }
 
     try {
-      const startedAt = Date.now();
-      elapsedStartRef.current = startedAt;
-      elapsedFinalRef.current = null;
+      const localStartedAt = Date.now();
+      startedAtRef.current = localStartedAt;
+      finalElapsedRef.current = null;
+
       setElapsed(0);
       setDisplayProgress(4);
       setIsSubmitting(true);
@@ -362,6 +412,12 @@ export default function Home() {
         );
       }
 
+      const serverStartMs = getStatusStartMs(data);
+      if (serverStartMs) {
+        startedAtRef.current = serverStartMs;
+        setElapsed(elapsedSecondsFrom(serverStartMs));
+      }
+
       setStatus(data);
       setIsSubmitting(false);
 
@@ -377,12 +433,11 @@ export default function Home() {
 
       poll(id);
     } catch (err: any) {
-      elapsedStartRef.current = null;
-      elapsedFinalRef.current = null;
       setIsSubmitting(false);
       setStatus(null);
       setDisplayProgress(0);
-      setElapsed(0);
+      startedAtRef.current = null;
+      finalElapsedRef.current = null;
       setError(err?.message || "Something went wrong.");
     }
   }
@@ -393,10 +448,10 @@ export default function Home() {
       pollRef.current = null;
     }
 
-    elapsedStartRef.current = null;
-    elapsedFinalRef.current = null;
     setStatus(null);
     setDisplayProgress(0);
+    startedAtRef.current = null;
+    finalElapsedRef.current = null;
     setElapsed(0);
     setIsSubmitting(false);
     setError("");
