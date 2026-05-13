@@ -2,11 +2,8 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function POST(req: Request) {
-  const apiBase = process.env.STUDYPACK_API_BASE;
-
-  if (!apiBase) {
-    return new Response("Missing STUDYPACK_API_BASE", { status: 500 });
-  }
+  const apiBase =
+    process.env.STUDYPACK_API_BASE || "http://170.64.209.149:8002";
 
   const formData = await req.formData();
 
