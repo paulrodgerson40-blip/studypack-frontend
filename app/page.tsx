@@ -30,6 +30,8 @@ type JobStatus = {
   error?: string;
 };
 
+const API_VERSION_LABEL = "AI Tutor Engine V8";
+
 const fallbackInsights = [
   "Detecting high-yield assessment themes...",
   "Finding quiz-style knowledge checks...",
@@ -84,19 +86,19 @@ function estimatePages(progress: number, detected?: JobStatus["detected_sections
     (detected?.assessment_hotspots || 0);
 
   if (base > 0) {
-    return Math.max(8, Math.min(42, Math.round(base * 1.25 + progress / 7)));
+    return Math.max(8, Math.min(46, Math.round(base * 1.35 + progress / 7)));
   }
 
-  return Math.max(2, Math.min(32, Math.round(progress / 4)));
+  return Math.max(2, Math.min(36, Math.round(progress / 3.6)));
 }
 
 function estimateRemaining(progress: number, status?: string) {
   if (status === "complete") return "Ready now";
-  if (progress < 15) return "About 1–3 minutes";
-  if (progress < 45) return "About 60–120 seconds";
-  if (progress < 75) return "About 45–90 seconds";
-  if (progress < 92) return "About 20–45 seconds";
-  return "Final rendering";
+  if (progress < 15) return "1–3 min";
+  if (progress < 45) return "60–120 sec";
+  if (progress < 75) return "45–90 sec";
+  if (progress < 92) return "20–45 sec";
+  return "Final render";
 }
 
 export default function Home() {
@@ -148,18 +150,12 @@ export default function Home() {
   }, [status?.stage, insightIndex]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setInsightIndex((x) => x + 1);
-    }, 3400);
-
+    const timer = setInterval(() => setInsightIndex((x) => x + 1), 3400);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setActivityIndex((x) => x + 1);
-    }, 2100);
-
+    const timer = setInterval(() => setActivityIndex((x) => x + 1), 2100);
     return () => clearInterval(timer);
   }, []);
 
@@ -174,10 +170,7 @@ export default function Home() {
       return;
     }
 
-    setDisplayProgress((current) => {
-      if (backendProgress > current) return backendProgress;
-      return current;
-    });
+    setDisplayProgress((current) => (backendProgress > current ? backendProgress : current));
   }, [backendProgress, isGenerating, isComplete]);
 
   useEffect(() => {
@@ -191,7 +184,7 @@ export default function Home() {
           return Math.min(real, current + 1.8);
         }
 
-        const softCap = Math.min(96, real + 7);
+        const softCap = Math.min(96, real + 8);
 
         if (current < softCap) {
           return Math.min(softCap, current + 0.35);
@@ -236,8 +229,8 @@ export default function Home() {
     e.preventDefault();
     setError("");
 
-    if (!subject.trim() || !week.trim() || !topic.trim()) {
-      setError("Please enter subject, week and topic.");
+    if (!subject.trim() || !week.trim()) {
+      setError("Please enter subject and week.");
       return;
     }
 
@@ -263,7 +256,7 @@ export default function Home() {
       const formData = new FormData();
       formData.append("subject", subject);
       formData.append("week", week);
-      formData.append("topic", topic);
+      formData.append("topic", topic.trim());
       files.forEach((file) => formData.append("files", file));
 
       const res = await fetch(`${API_BASE}/api/studypack/generate`, {
@@ -288,10 +281,7 @@ export default function Home() {
 
       if (pollingRef.current) clearInterval(pollingRef.current);
 
-      pollingRef.current = setInterval(() => {
-        pollStatus(newJobId);
-      }, 1800);
-
+      pollingRef.current = setInterval(() => pollStatus(newJobId), 1800);
       pollStatus(newJobId);
     } catch (err: any) {
       setIsSubmitting(false);
@@ -313,6 +303,7 @@ export default function Home() {
     setStatus(null);
     setError("");
     setFiles([]);
+    setTopic("");
     setDisplayProgress(0);
   }
 
@@ -354,7 +345,7 @@ export default function Home() {
           </div>
 
           <div className="hidden rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 shadow-2xl backdrop-blur md:block">
-            AI Tutor Engine V7
+            {API_VERSION_LABEL}
           </div>
         </header>
 
@@ -370,17 +361,13 @@ export default function Home() {
               </h1>
 
               <p className="mt-7 max-w-2xl text-lg leading-8 text-white/65">
-                Upload lecture PDFs, transcripts or slides. StudyPack builds an
-                assessment-focused pack with tutor notes, common traps, rapid recall,
-                quiz checks, HD insights and attack sheets.
+                Upload lecture PDFs, transcripts or slides. StudyPack detects the topic and
+                builds an assessment-focused pack with tutor notes, common traps, rapid
+                recall, quiz checks, HD insights and attack sheets.
               </p>
 
               <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
-                {[
-                  "Assessment Hotspots",
-                  "HD Model Answers",
-                  "Rapid Recall System",
-                ].map((x) => (
+                {["Assessment Hotspots", "HD Model Answers", "Rapid Recall System"].map((x) => (
                   <div
                     key={x}
                     className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 text-sm font-bold text-white/80 shadow-xl backdrop-blur"
@@ -397,7 +384,7 @@ export default function Home() {
             >
               <h2 className="text-2xl font-black">Create StudyPack</h2>
               <p className="mt-2 text-sm text-white/55">
-                Use clear subject/week/topic names for better output titles.
+                Enter subject and week. Topic is optional — StudyPack can detect it from your files.
               </p>
 
               <div className="mt-6 space-y-4">
@@ -419,11 +406,11 @@ export default function Home() {
                   />
                 </Field>
 
-                <Field label="Topic">
+                <Field label="Topic override (optional)">
                   <input
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
-                    placeholder="e.g. Prison rights and OPCAT"
+                    placeholder="Leave blank — StudyPack will detect this automatically"
                     className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white outline-none transition placeholder:text-white/25 focus:border-indigo-300/60"
                   />
                 </Field>
