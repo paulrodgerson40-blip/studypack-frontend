@@ -1,26 +1,35 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_STUDYPACK_API_BASE ||
   "https://studypack-api.170.64.209.149.sslip.io";
 
+type JobStatus = "idle" | "queued" | "processing" | "complete" | "failed";
+
 type GenerateResult = {
   ok: boolean;
   job_id: string;
-  files_processed: number;
+  status: JobStatus;
+  progress: number;
+  message: string;
+  files_processed?: number;
+  status_url?: string;
   preview_download_url?: string;
   premium_download_url?: string;
+  error?: string;
 };
 
-const LOADER_MESSAGES = [
-  "Uploading your lecture files...",
-  "Extracting course material...",
-  "Mapping topics and lecturer emphasis...",
-  "Building key concepts and summary...",
-  "Generating premium study sections...",
-  "Rendering preview and premium PDFs...",
+const STAGE_MESSAGES = [
+  "Uploading lecture files...",
+  "Extracting lecture content...",
+  "Analysing academic structure...",
+  "Identifying exam hotspots...",
+  "Building tutor-style explanations...",
+  "Generating model answers...",
+  "Rendering preview PDF...",
+  "Rendering premium Study Pack...",
   "Finalising download links...",
 ];
 
@@ -29,57 +38,94 @@ export default function Home() {
   const [week, setWeek] = useState("");
   const [topic, setTopic] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
+
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [messageIndex, setMessageIndex] = useState(0);
-  const [result, setResult] = useState<GenerateResult | null>(null);
+  const [job, setJob] = useState<GenerateResult | null>(null);
   const [error, setError] = useState("");
+  const [displayMessage, setDisplayMessage] = useState("Ready to build your Study Pack.");
+  const [fakeStage, setFakeStage] = useState(0);
 
-  useEffect(() => {
-    if (!loading) return;
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stageTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    const progressTimer = window.setInterval(() => {
-      setProgress((current) => {
-        if (current < 35) return current + 4;
-        if (current < 65) return current + 2;
-        if (current < 88) return current + 1;
-        return current;
-      });
-    }, 900);
-
-    const messageTimer = window.setInterval(() => {
-      setMessageIndex((current) =>
-        current < LOADER_MESSAGES.length - 1 ? current + 1 : current
-      );
-    }, 9000);
-
-    return () => {
-      window.clearInterval(progressTimer);
-      window.clearInterval(messageTimer);
-    };
-  }, [loading]);
+  const progress = job?.progress ?? 0;
+  const isComplete = job?.status === "complete";
+  const isFailed = job?.status === "failed";
 
   const previewUrl = useMemo(() => {
-    if (!result) return "";
-    const path =
-      result.preview_download_url ||
-      `/api/studypack/download/${result.job_id}?version=preview`;
-    return `${API_BASE}${path}${path.includes("?") ? "&" : "?"}t=${Date.now()}`;
-  }, [result]);
+    if (!job?.job_id) return "";
+    return `${API_BASE}/api/studypack/download/${job.job_id}?version=preview&t=${Date.now()}`;
+  }, [job?.job_id]);
 
   const premiumUrl = useMemo(() => {
-    if (!result) return "";
-    const path =
-      result.premium_download_url ||
-      `/api/studypack/download/${result.job_id}?version=premium`;
-    return `${API_BASE}${path}${path.includes("?") ? "&" : "?"}t=${Date.now()}`;
-  }, [result]);
+    if (!job?.job_id) return "";
+    return `${API_BASE}/api/studypack/download/${job.job_id}?version=premium&t=${Date.now()}`;
+  }, [job?.job_id]);
+
+  function clearTimers() {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    if (stageTimerRef.current) {
+      clearInterval(stageTimerRef.current);
+      stageTimerRef.current = null;
+    }
+  }
+
+  useEffect(() => {
+    return () => clearTimers();
+  }, []);
+
+  function startStageMessages() {
+    setFakeStage(0);
+    stageTimerRef.current = setInterval(() => {
+      setFakeStage((prev) => {
+        const next = Math.min(prev + 1, STAGE_MESSAGES.length - 1);
+        setDisplayMessage(STAGE_MESSAGES[next]);
+        return next;
+      });
+    }, 9000);
+  }
+
+  async function pollStatus(jobId: string) {
+    try {
+      const res = await fetch(`${API_BASE}/api/studypack/status/${jobId}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        throw new Error(`Status check failed: ${res.status}`);
+      }
+
+      const data = (await res.json()) as GenerateResult;
+      setJob(data);
+
+      if (data.message) {
+        setDisplayMessage(data.message);
+      }
+
+      if (data.status === "complete") {
+        clearTimers();
+        setLoading(false);
+        setError("");
+        setDisplayMessage("Study Pack ready. Download your preview and premium pack below.");
+      }
+
+      if (data.status === "failed") {
+        clearTimers();
+        setLoading(false);
+        setError(data.error || data.message || "Study Pack generation failed.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
   async function handleGenerate() {
     setError("");
-    setResult(null);
-    setProgress(0);
-    setMessageIndex(0);
+    setJob(null);
 
     if (!subject.trim() || !week.trim() || !topic.trim()) {
       setError("Please enter subject, week and topic.");
@@ -91,10 +137,12 @@ export default function Home() {
       return;
     }
 
+    clearTimers();
+
     const formData = new FormData();
-    formData.append("subject", subject.trim());
-    formData.append("week", week.trim());
-    formData.append("topic", topic.trim());
+    formData.append("subject", subject);
+    formData.append("week", week);
+    formData.append("topic", topic);
 
     Array.from(files).forEach((file) => {
       formData.append("files", file);
@@ -102,47 +150,36 @@ export default function Home() {
 
     try {
       setLoading(true);
-      setProgress(8);
+      setDisplayMessage("Uploading files...");
+      startStageMessages();
 
       const res = await fetch(`${API_BASE}/api/studypack/generate`, {
         method: "POST",
         body: formData,
       });
 
-      const rawText = await res.text();
-
       if (!res.ok) {
-        throw new Error(
-          rawText || `Generation failed with status ${res.status}`
-        );
+        throw new Error(`Generation start failed: ${res.status}`);
       }
 
-      let data: GenerateResult;
-      try {
-        data = JSON.parse(rawText) as GenerateResult;
-      } catch {
-        throw new Error("Backend returned an invalid response.");
-      }
+      const data = (await res.json()) as GenerateResult;
+      setJob(data);
+      setDisplayMessage(data.message || "StudyPack is now processing...");
 
-      if (!data?.job_id) {
-        throw new Error("Study Pack generated, but no job ID was returned.");
-      }
+      pollTimerRef.current = setInterval(() => {
+        pollStatus(data.job_id);
+      }, 2500);
 
-      setResult(data);
-      setProgress(100);
-      setMessageIndex(LOADER_MESSAGES.length - 1);
+      pollStatus(data.job_id);
     } catch (err: unknown) {
-      if (err instanceof TypeError) {
-        setError(
-          "Connection failed. The backend may still be processing or the browser request timed out. Check latest output folder on the VPS."
-        );
-      } else if (err instanceof Error) {
+      clearTimers();
+      setLoading(false);
+
+      if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError("Something went wrong.");
+        setError("Connection failed. Please try again.");
       }
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -150,7 +187,7 @@ export default function Home() {
     <main className="min-h-screen bg-[#070707] text-white">
       <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-6 py-12">
         <div className="mb-10">
-          <div className="mb-4 text-sm font-bold uppercase tracking-[0.35em] text-orange-400">
+          <div className="mb-4 text-sm font-black uppercase tracking-[0.35em] text-orange-400">
             StudyPack.ai
           </div>
 
@@ -159,8 +196,8 @@ export default function Home() {
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
-            Upload your course material and generate both a free preview and a
-            premium full Study Pack for testing.
+            Upload your course material and generate a free preview plus a premium
+            full Study Pack for testing.
           </p>
         </div>
 
@@ -183,7 +220,7 @@ export default function Home() {
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="Topic e.g. Prisoners Rights"
+              placeholder="Topic e.g. Prisoner Rights"
               className="rounded-2xl border border-white/10 bg-black px-4 py-4 text-white outline-none focus:border-orange-400"
             />
           </div>
@@ -207,24 +244,26 @@ export default function Home() {
             )}
           </div>
 
-          {loading && (
+          {(loading || job) && (
             <div className="mt-5 rounded-2xl border border-orange-500/30 bg-orange-500/10 p-5">
-              <div className="flex items-center justify-between gap-4 text-sm font-bold text-orange-100">
-                <span>{LOADER_MESSAGES[messageIndex]}</span>
-                <span>{progress}%</span>
+              <div className="mb-3 flex items-center justify-between gap-4">
+                <p className="text-sm font-bold text-orange-100">{displayMessage}</p>
+                <p className="text-sm font-black text-orange-200">{progress}%</p>
               </div>
 
-              <div className="mt-4 h-3 overflow-hidden rounded-full bg-black/60">
+              <div className="h-3 overflow-hidden rounded-full bg-black/60">
                 <div
                   className="h-full rounded-full bg-orange-500 transition-all duration-700"
-                  style={{ width: `${progress}%` }}
+                  style={{ width: `${Math.max(progress, loading ? 8 : 0)}%` }}
                 />
               </div>
 
-              <p className="mt-3 text-xs text-orange-100/80">
-                Premium packs can take a few minutes. Keep this tab open while
-                StudyPack.ai builds the output.
-              </p>
+              {loading && (
+                <p className="mt-3 text-xs text-zinc-400">
+                  Large transcripts can take a few minutes. This page now checks the
+                  backend in the background instead of timing out.
+                </p>
+              )}
             </div>
           )}
 
@@ -234,41 +273,73 @@ export default function Home() {
             </div>
           )}
 
-          {result && !error && (
-            <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-              Study Pack ready. {result.files_processed} file(s) processed.
-            </div>
-          )}
-
           <button
             onClick={handleGenerate}
             disabled={loading}
             className="mt-6 w-full rounded-2xl bg-orange-500 px-6 py-5 text-lg font-black text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Generating Study Pack..." : "Generate Study Pack"}
+            {loading ? "Building Your Study Pack..." : "Generate Study Pack"}
           </button>
 
-          {result && (
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
-              <a
-                href={previewUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-2xl border border-white/10 bg-zinc-900 p-5 text-center font-black text-white transition hover:bg-zinc-800"
-              >
-                Download Free Preview
-              </a>
+          {isComplete && (
+            <div className="mt-8 rounded-3xl border border-green-500/30 bg-green-500/10 p-5">
+              <h2 className="text-xl font-black text-green-100">
+                Your Study Pack is ready.
+              </h2>
+              <p className="mt-2 text-sm text-green-100/80">
+                Download the free preview and premium full pack below.
+              </p>
 
-              <a
-                href={premiumUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-2xl bg-white p-5 text-center font-black text-black transition hover:bg-orange-100"
-              >
-                Download Premium Full Pack
-              </a>
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <a
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-2xl border border-white/10 bg-zinc-900 p-5 text-center font-black text-white transition hover:bg-zinc-800"
+                >
+                  Download Free Preview
+                </a>
+
+                <a
+                  href={premiumUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-2xl bg-white p-5 text-center font-black text-black transition hover:bg-orange-100"
+                >
+                  Download Premium Full Pack
+                </a>
+              </div>
             </div>
           )}
+
+          {isFailed && (
+            <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+              Generation failed. Check backend logs for the specific error.
+            </div>
+          )}
+        </div>
+
+        <div className="mt-8 grid gap-4 text-sm text-zinc-400 md:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <strong className="text-white">Free Preview</strong>
+            <p className="mt-2">
+              Summary, topic map, key concepts and locked premium sections.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <strong className="text-white">Premium Pack</strong>
+            <p className="mt-2">
+              Expanded notes, model answers, revision sheet, glossary and cram sheet.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <strong className="text-white">No Timeout Flow</strong>
+            <p className="mt-2">
+              Generation now runs as a background job with live progress polling.
+            </p>
+          </div>
         </div>
       </section>
     </main>
