@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const progressStages = [
   "Uploading lecture files...",
@@ -9,7 +9,14 @@ const progressStages = [
   "Building your Study Pack...",
   "Generating revision questions...",
   "Rendering PDF...",
-  "Almost ready...",
+  "Finalising your downloads...",
+];
+
+const finalStages = [
+  "Still working — generating detailed notes...",
+  "Still working — building model answers...",
+  "Still working — rendering your PDFs...",
+  "Almost done — large files can take a few minutes...",
 ];
 
 export default function Home() {
@@ -21,33 +28,51 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState("");
-  const [downloadUrl, setDownloadUrl] = useState("");
+  const [finalStageIndex, setFinalStageIndex] = useState(0);
+
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [premiumUrl, setPremiumUrl] = useState("");
   const [error, setError] = useState("");
+
+  const selectedFileNames = useMemo(() => {
+    if (!files || files.length === 0) return [];
+    return Array.from(files).map((file) => file.name);
+  }, [files]);
 
   useEffect(() => {
     if (!loading) return;
 
-    setProgress(8);
+    setProgress(6);
     setStage(progressStages[0]);
+    setFinalStageIndex(0);
 
     const interval = setInterval(() => {
       setProgress((current) => {
-        const next = Math.min(current + Math.random() * 8, 92);
+        const next = Math.min(current + Math.random() * 7, 94);
+
         const stageIndex = Math.min(
           Math.floor((next / 100) * progressStages.length),
           progressStages.length - 1
         );
-        setStage(progressStages[stageIndex]);
+
+        if (next >= 90) {
+          setFinalStageIndex((old) => (old + 1) % finalStages.length);
+          setStage(finalStages[finalStageIndex]);
+        } else {
+          setStage(progressStages[stageIndex]);
+        }
+
         return next;
       });
     }, 1800);
 
     return () => clearInterval(interval);
-  }, [loading]);
+  }, [loading, finalStageIndex]);
 
   async function generatePack() {
     setError("");
-    setDownloadUrl("");
+    setPreviewUrl("");
+    setPremiumUrl("");
 
     if (!subject.trim() || !week.trim() || !topic.trim()) {
       setError("Enter subject, week and topic.");
@@ -84,9 +109,21 @@ export default function Home() {
 
       setProgress(100);
       setStage("Study Pack ready.");
-      setDownloadUrl(`/api/studypack/download/${data.job_id}`);
-    } catch (err: any) {
-      setError(err.message || "Generation failed.");
+
+      setPreviewUrl(
+        data.preview_download_url ||
+          data.download_url ||
+          `/api/studypack/download/${data.job_id}`
+      );
+
+      setPremiumUrl(
+        data.premium_download_url ||
+          `/api/studypack/download/${data.job_id}?version=premium`
+      );
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Generation failed.";
+      setError(message);
       setProgress(0);
       setStage("");
     } finally {
@@ -153,10 +190,26 @@ export default function Home() {
               onChange={(e) => setFiles(e.target.files)}
               className="w-full border rounded-xl px-4 py-4 bg-neutral-50"
             />
+
             <p className="text-sm text-neutral-500 mt-2">
               Upload as many lecture parts, transcripts and slide decks as
               needed.
             </p>
+
+            {selectedFileNames.length > 0 && (
+              <div className="mt-3 rounded-xl border bg-neutral-50 p-3">
+                <p className="text-sm font-bold mb-2">
+                  Selected files ({selectedFileNames.length})
+                </p>
+                <ul className="text-sm text-neutral-700 space-y-1">
+                  {selectedFileNames.map((name) => (
+                    <li key={name} className="truncate">
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           <button
@@ -181,26 +234,51 @@ export default function Home() {
                 <span>{Math.round(progress)}%</span>
               </div>
 
+              {progress >= 90 && (
+                <p className="text-sm text-orange-700 font-semibold animate-pulse">
+                  Finalising your Study Pack. Large lecture files can take a few
+                  minutes — please keep this page open.
+                </p>
+              )}
+
               <p className="text-xs text-neutral-500">
-                Large PowerPoint files can take a few minutes. Please keep this
-                page open.
+                StudyPack is reading your files, building expanded notes,
+                generating questions and rendering your PDFs.
               </p>
             </div>
           )}
 
           {error && (
-            <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-4 text-sm">
+            <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-4 text-sm whitespace-pre-wrap">
               {error}
             </div>
           )}
 
-          {downloadUrl && (
-            <a
-              href={downloadUrl}
-              className="block text-center rounded-2xl bg-green-600 text-white py-4 font-black text-lg"
-            >
-              Download PDF
-            </a>
+          {(previewUrl || premiumUrl) && (
+            <div className="grid gap-3">
+              {previewUrl && (
+                <a
+                  href={previewUrl}
+                  className="block text-center rounded-2xl bg-neutral-900 text-white py-4 font-black text-lg"
+                >
+                  Download Free Preview PDF
+                </a>
+              )}
+
+              {premiumUrl && (
+                <a
+                  href={premiumUrl}
+                  className="block text-center rounded-2xl bg-green-600 text-white py-4 font-black text-lg"
+                >
+                  Download Premium Test PDF
+                </a>
+              )}
+
+              <p className="text-xs text-neutral-500 text-center">
+                For testing, both preview and premium downloads are shown. Later,
+                premium will require subscription access.
+              </p>
+            </div>
           )}
         </div>
       </div>
