@@ -32,9 +32,9 @@ type JobStatus = {
 
 const API_VERSION = "StudyPack.ai Engine V31";
 
-const MAX_FILES = 2;
-const MAX_FILE_MB = 15;
-const MAX_TOTAL_MB = 25;
+const MAX_FILES = 4;
+const MAX_FILE_MB = 5;
+const MAX_TOTAL_MB = 20;
 const MAX_EXTRACTED_WORDS = 35000;
 
 const acceptedExtensions = [".pdf", ".docx", ".pptx", ".txt"];
