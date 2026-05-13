@@ -1,15 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_STUDYPACK_API_BASE || "http://170.64.209.149:8000";
+  process.env.NEXT_PUBLIC_STUDYPACK_API_BASE ||
+  "https://studypack-api.170.64.209.149.sslip.io";
 
 type GenerateResult = {
   ok: boolean;
   job_id: string;
   files_processed: number;
+  preview_download_url?: string;
+  premium_download_url?: string;
 };
+
+const LOADER_MESSAGES = [
+  "Uploading your lecture files...",
+  "Extracting course material...",
+  "Mapping topics and lecturer emphasis...",
+  "Building key concepts and summary...",
+  "Generating premium study sections...",
+  "Rendering preview and premium PDFs...",
+  "Finalising download links...",
+];
 
 export default function Home() {
   const [subject, setSubject] = useState("");
@@ -17,13 +30,56 @@ export default function Home() {
   const [topic, setTopic] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
   const [loading, setLoading] = useState(false);
-  const [progressText, setProgressText] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [messageIndex, setMessageIndex] = useState(0);
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!loading) return;
+
+    const progressTimer = window.setInterval(() => {
+      setProgress((current) => {
+        if (current < 35) return current + 4;
+        if (current < 65) return current + 2;
+        if (current < 88) return current + 1;
+        return current;
+      });
+    }, 900);
+
+    const messageTimer = window.setInterval(() => {
+      setMessageIndex((current) =>
+        current < LOADER_MESSAGES.length - 1 ? current + 1 : current
+      );
+    }, 9000);
+
+    return () => {
+      window.clearInterval(progressTimer);
+      window.clearInterval(messageTimer);
+    };
+  }, [loading]);
+
+  const previewUrl = useMemo(() => {
+    if (!result) return "";
+    const path =
+      result.preview_download_url ||
+      `/api/studypack/download/${result.job_id}?version=preview`;
+    return `${API_BASE}${path}${path.includes("?") ? "&" : "?"}t=${Date.now()}`;
+  }, [result]);
+
+  const premiumUrl = useMemo(() => {
+    if (!result) return "";
+    const path =
+      result.premium_download_url ||
+      `/api/studypack/download/${result.job_id}?version=premium`;
+    return `${API_BASE}${path}${path.includes("?") ? "&" : "?"}t=${Date.now()}`;
+  }, [result]);
 
   async function handleGenerate() {
     setError("");
     setResult(null);
+    setProgress(0);
+    setMessageIndex(0);
 
     if (!subject.trim() || !week.trim() || !topic.trim()) {
       setError("Please enter subject, week and topic.");
@@ -36,9 +92,9 @@ export default function Home() {
     }
 
     const formData = new FormData();
-    formData.append("subject", subject);
-    formData.append("week", week);
-    formData.append("topic", topic);
+    formData.append("subject", subject.trim());
+    formData.append("week", week.trim());
+    formData.append("topic", topic.trim());
 
     Array.from(files).forEach((file) => {
       formData.append("files", file);
@@ -46,39 +102,49 @@ export default function Home() {
 
     try {
       setLoading(true);
-      setProgressText("Uploading files and building your Study Pack...");
+      setProgress(8);
 
       const res = await fetch(`${API_BASE}/api/studypack/generate`, {
         method: "POST",
         body: formData,
       });
 
+      const rawText = await res.text();
+
       if (!res.ok) {
-        throw new Error(`Generation failed: ${res.status}`);
+        throw new Error(
+          rawText || `Generation failed with status ${res.status}`
+        );
       }
 
-      const data = (await res.json()) as GenerateResult;
+      let data: GenerateResult;
+      try {
+        data = JSON.parse(rawText) as GenerateResult;
+      } catch {
+        throw new Error("Backend returned an invalid response.");
+      }
+
+      if (!data?.job_id) {
+        throw new Error("Study Pack generated, but no job ID was returned.");
+      }
+
       setResult(data);
-      setProgressText("Study Pack ready.");
+      setProgress(100);
+      setMessageIndex(LOADER_MESSAGES.length - 1);
     } catch (err: unknown) {
-      if (err instanceof Error) {
+      if (err instanceof TypeError) {
+        setError(
+          "Connection failed. The backend may still be processing or the browser request timed out. Check latest output folder on the VPS."
+        );
+      } else if (err instanceof Error) {
         setError(err.message);
       } else {
         setError("Something went wrong.");
       }
-      setProgressText("");
     } finally {
       setLoading(false);
     }
   }
-
-  const previewUrl = result
-    ? `${API_BASE}/api/studypack/download/${result.job_id}?version=preview&t=${Date.now()}`
-    : "";
-
-  const premiumUrl = result
-    ? `${API_BASE}/api/studypack/download/${result.job_id}?version=premium&t=${Date.now()}`
-    : "";
 
   return (
     <main className="min-h-screen bg-[#070707] text-white">
@@ -141,15 +207,36 @@ export default function Home() {
             )}
           </div>
 
+          {loading && (
+            <div className="mt-5 rounded-2xl border border-orange-500/30 bg-orange-500/10 p-5">
+              <div className="flex items-center justify-between gap-4 text-sm font-bold text-orange-100">
+                <span>{LOADER_MESSAGES[messageIndex]}</span>
+                <span>{progress}%</span>
+              </div>
+
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-black/60">
+                <div
+                  className="h-full rounded-full bg-orange-500 transition-all duration-700"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+
+              <p className="mt-3 text-xs text-orange-100/80">
+                Premium packs can take a few minutes. Keep this tab open while
+                StudyPack.ai builds the output.
+              </p>
+            </div>
+          )}
+
           {error && (
             <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
               {error}
             </div>
           )}
 
-          {progressText && (
-            <div className="mt-4 rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 text-sm text-orange-100">
-              {progressText}
+          {result && !error && (
+            <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+              Study Pack ready. {result.files_processed} file(s) processed.
             </div>
           )}
 
