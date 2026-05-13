@@ -521,7 +521,7 @@ export default function Home() {
                 </div>
 
                 <p className="mt-2 text-xs leading-5 text-white/45">
-                  Premium StudyPacks usually take 1–3 minutes
+                  Premium StudyPacks usually take 1–5 minutes
                   because the system is building tutor-level
                   explanations, assessment strategy, rapid
                   recall systems and model answers — not just
