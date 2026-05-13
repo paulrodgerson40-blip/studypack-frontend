@@ -138,7 +138,7 @@ export default function Home() {
 
     if (files.length > MAX_FILES) {
       warnings.push(
-        `Please upload up to ${MAX_FILES} focused weekly files only. Recommended: transcript + slides.`
+        `Please upload up to ${MAX_FILES} focused weekly files only.`
       );
     }
 
@@ -152,6 +152,7 @@ export default function Home() {
 
     files.forEach((f) => {
       const ext = fileExt(f.name);
+
       if (!acceptedExtensions.includes(ext)) {
         warnings.push(
           `${f.name} is not supported. Use PDF, DOCX, PPTX or TXT.`
@@ -242,34 +243,6 @@ export default function Home() {
     return () => clearInterval(t);
   }, [backendProgress, isGenerating, isComplete]);
 
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
-
-  async function poll(jobId: string) {
-    try {
-      const res = await fetch(`${API_BASE}/api/studypack/status/${jobId}`, {
-        cache: "no-store",
-      });
-
-      const data = await res.json();
-
-      setStatus(data);
-
-      if (data.status === "failed") {
-        setError(extractFriendlyError(data, "StudyPack generation failed."));
-      }
-
-      if (data.status === "complete" || data.status === "failed") {
-        if (pollRef.current) clearInterval(pollRef.current);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -281,12 +254,7 @@ export default function Home() {
     }
 
     if (!files.length) {
-      setError("Please upload your weekly lecture transcript. You can also include lecture slides if you have them.");
-      return;
-    }
-
-    if (fileWarnings.length) {
-      setError(fileWarnings.join("\n\n"));
+      setError("Please upload study files.");
       return;
     }
 
@@ -294,16 +262,6 @@ export default function Home() {
       setElapsed(0);
       setDisplayProgress(4);
       setIsSubmitting(true);
-
-      setStatus({
-        status: "queued",
-        progress: 4,
-        stage_title: "Preparing your StudyPack",
-        stage_detail:
-          "Checking your upload and preparing your weekly material for tutor-level analysis.",
-        completed_steps: [],
-        active_step: "Uploading files",
-      });
 
       const fd = new FormData();
 
@@ -318,111 +276,15 @@ export default function Home() {
         body: fd,
       });
 
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        throw new Error(
-          extractFriendlyError(
-            data,
-            "This upload could not be processed. Please use a focused weekly lecture transcript and optional lecture slides."
-          )
-        );
-      }
+      const data = await res.json();
 
       setStatus(data);
       setIsSubmitting(false);
-
-      const id = data.job_id;
-
-      if (!id) {
-        throw new Error("StudyPack started, but no job ID was returned.");
-      }
-
-      pollRef.current = setInterval(() => {
-        poll(id);
-      }, 1800);
-
-      poll(id);
     } catch (err: any) {
-      setIsSubmitting(false);
-      setStatus(null);
-      setDisplayProgress(0);
       setError(err?.message || "Something went wrong.");
+      setIsSubmitting(false);
     }
   }
-
-  function resetToStart() {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-
-    setStatus(null);
-    setDisplayProgress(0);
-    setElapsed(0);
-    setIsSubmitting(false);
-    setError("");
-    setFiles([]);
-  }
-
-  const generatedComponents = [
-    {
-      label: "Upload Quality Check",
-      active: displayProgress >= 22,
-    },
-    {
-      label: "Assessment Focus",
-      active: displayProgress >= 35,
-    },
-    {
-      label: "Tutor Notes",
-      active: displayProgress >= 48,
-    },
-    {
-      label: "Critical Debates",
-      active: displayProgress >= 60,
-    },
-    {
-      label: "Rapid Recall",
-      active: displayProgress >= 70,
-    },
-    {
-      label: "Model Answers",
-      active: displayProgress >= 83,
-    },
-    {
-      label: "Locked Preview",
-      active: displayProgress >= 94,
-    },
-  ];
-
-  const pagesEstimate = Math.max(8, Math.round(displayProgress / 3.1));
-
-  const detected = status?.detected_sections;
-
-  const liveInsight =
-    rotatingInsights[insightIndex % rotatingInsights.length];
-
-  const liveActivity = activityFeed[activityIndex % activityFeed.length];
-
-  const metrics = [
-    {
-      label: "Hotspots",
-      value: detected?.assessment_hotspots?.toString() || "—",
-    },
-    {
-      label: "Tutor Notes",
-      value: detected?.expanded_notes?.toString() || "—",
-    },
-    {
-      label: "Quiz Checks",
-      value: detected?.quiz_checks?.toString() || "—",
-    },
-    {
-      label: "Practice Qs",
-      value: detected?.practice_questions?.toString() || "—",
-    },
-  ];
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#040816] text-white">
@@ -433,508 +295,156 @@ export default function Home() {
       </div>
 
       <section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-8 md:px-10">
+
         <header className="mb-10 flex items-center justify-between">
-          <div>
-            <div className="text-sm font-black uppercase tracking-[0.35em] text-white/55">
-              StudyPack.ai
+
+          <div className="flex items-center gap-4">
+
+            <img
+              src="/studypack-logo-dark.png"
+              alt="StudyPack.ai"
+              className="h-12 w-auto"
+            />
+
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.35em] text-white/45">
+                Premium AI tutor-grade university study packs
+              </div>
             </div>
 
-            <div className="mt-2 text-xs text-white/45">
-              Premium AI tutor-grade university study packs
-            </div>
           </div>
 
           <div className="hidden rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-bold text-white/70 backdrop-blur md:block">
             {API_VERSION}
           </div>
+
         </header>
 
-        {!isGenerating && !isComplete && !isFailed && (
-          <div className="grid flex-1 items-center gap-10 lg:grid-cols-[1.08fr_0.92fr]">
-            <div>
-              <div className="mb-5 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-100">
-                Built for quizzes, assignments and exams
-              </div>
+        <div className="grid flex-1 items-center gap-10 lg:grid-cols-[1.08fr_0.92fr]">
 
-              <h1 className="max-w-5xl text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
-                Your new elite university study system.
-              </h1>
+          <div>
 
-              <p className="mt-7 max-w-2xl text-lg leading-8 text-white/60">
-                Upload your weekly lecture transcript and lecture slides to create a premium tutor-style StudyPack with assessment focus, deep explanations, rapid revision and model answers.
-              </p>
-
-              <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
-                {[
-                  "Focused Weekly Uploads",
-                  "Tutor-Level Explanations",
-                  "Premium Locked Preview",
-                ].map((x) => (
-                  <div
-                    key={x}
-                    className="rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-sm font-bold text-white/80 backdrop-blur"
-                  >
-                    {x}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 max-w-3xl rounded-3xl border border-orange-300/15 bg-orange-300/10 p-5">
-                <div className="text-sm font-black uppercase tracking-[0.2em] text-orange-100/80">
-                  Best Results
-                </div>
-                <p className="mt-2 text-sm leading-6 text-white/65">
-                  Smaller focused uploads produce better StudyPacks. Use one week at a time: lecture transcript first, lecture slides if available.
-                </p>
-              </div>
+            <div className="mb-5 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-100">
+              Built for quizzes, assignments and exams
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              className="rounded-[2rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl backdrop-blur-xl md:p-8"
-            >
-              <h2 className="text-3xl font-black">Create StudyPack</h2>
+            <h1 className="max-w-5xl text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
+              Your new elite university study system.
+            </h1>
 
-              <p className="mt-2 text-sm text-white/50">
-                Topic detection is automatic. Focused weekly uploads create the best results.
-              </p>
+            <p className="mt-7 max-w-2xl text-lg leading-8 text-white/60">
+              Upload your weekly lecture transcript and lecture slides to create a premium tutor-style StudyPack with assessment focus, deep explanations, rapid revision and model answers.
+            </p>
 
-              <UploadGuidance />
+            <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
 
-              <div className="mt-6 space-y-4">
-                <Field label="Subject">
-                  <input
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="e.g. CRIM335 or LAW399"
-                    className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/25 focus:border-cyan-300/50"
-                  />
-                </Field>
-
-                <Field label="Week">
-                  <input
-                    value={week}
-                    onChange={(e) => setWeek(e.target.value)}
-                    placeholder="e.g. Week 3"
-                    className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/25 focus:border-cyan-300/50"
-                  />
-                </Field>
-
-                <Field label="Topic override (optional)">
-                  <input
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    placeholder="Leave blank for auto-detection"
-                    className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/25 focus:border-cyan-300/50"
-                  />
-                </Field>
-
-                <Field label="Upload weekly study files">
-                  <input
-                    type="file"
-                    multiple
-                    accept=".pdf,.txt,.pptx,.docx"
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.files || []);
-                      setFiles(selected);
-                      setError("");
-                    }}
-                    className="w-full cursor-pointer rounded-2xl border border-dashed border-white/15 bg-black/20 px-4 py-5 text-sm text-white/70 file:mr-4 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-bold file:text-black"
-                  />
-
-                  <div className="mt-3 text-xs leading-5 text-white/40">
-                    Accepted: PDF, DOCX, PPTX, TXT. Up to {MAX_FILES} files, {MAX_FILE_MB}MB per file, {MAX_TOTAL_MB}MB total.
-                  </div>
-
-                  {!!files.length && (
-                    <SelectedFiles files={files} totalBytes={selectedTotalBytes} />
-                  )}
-
-                  {!!fileWarnings.length && (
-                    <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-sm leading-6 text-amber-50">
-                      <div className="font-black">Upload needs adjustment</div>
-                      <ul className="mt-2 list-disc space-y-1 pl-5">
-                        {fileWarnings.map((w) => (
-                          <li key={w}>{w}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </Field>
-
-                {error && (
-                  <div className="whitespace-pre-line rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm leading-6 text-red-100">
-                    {error}
-                  </div>
-                )}
-
-                <button
-                  disabled={!canSubmit}
-                  className={
-                    canSubmit
-                      ? "w-full rounded-2xl bg-white px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-black transition hover:scale-[1.01]"
-                      : "w-full cursor-not-allowed rounded-2xl bg-white/25 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-white/40"
-                  }
-                >
-                  {isSubmitting ? "Starting..." : "Generate StudyPack"}
-                </button>
-
-                <p className="text-center text-xs leading-5 text-white/35">
-                  Free preview includes the opening pages plus a locked upgrade page. Full StudyPacks require credits.
-                </p>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {isGenerating && (
-          <div className="flex flex-1 items-center justify-center">
-            <div className="w-full max-w-6xl rounded-[2.4rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl backdrop-blur-xl md:p-10">
-              <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <div className="mb-3 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-cyan-100">
-                    StudyPack Engine Active
-                  </div>
-
-                  <h2 className="text-4xl font-black tracking-tight md:text-5xl">
-                    {status?.stage_title || "Building your StudyPack"}
-                  </h2>
-
-                  <p className="mt-3 max-w-2xl text-base leading-7 text-white/55">
-                    {status?.stage_detail ||
-                      "Constructing your premium assessment-ready study system."}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <MetricPill
-                    label="Complete"
-                    value={`${Math.round(displayProgress)}%`}
-                  />
-
-                  <MetricPill label="Pages" value={`${pagesEstimate}`} />
-
-                  <MetricPill label="Elapsed" value={formatElapsed(elapsed)} />
-                </div>
-              </div>
-
-              <div className="relative mb-5 h-4 overflow-hidden rounded-full bg-white/10">
+              {[
+                "Focused Weekly Uploads",
+                "Tutor-Level Explanations",
+                "Premium Locked Preview",
+              ].map((x) => (
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 via-indigo-300 to-fuchsia-300 transition-all duration-700"
-                  style={{
-                    width: `${displayProgress}%`,
-                  }}
+                  key={x}
+                  className="rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-sm font-bold text-white/80 backdrop-blur"
                 >
-                  <div className="absolute inset-0 animate-[shimmer_1.6s_infinite] bg-gradient-to-r from-transparent via-white/45 to-transparent" />
+                  {x}
                 </div>
-              </div>
+              ))}
 
-              <div className="mb-7 rounded-3xl border border-cyan-300/15 bg-cyan-300/10 p-4">
-                <div className="flex items-center gap-3 text-sm font-bold text-cyan-50">
-                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-300" />
-                  {status?.message || liveActivity}
-                </div>
-
-                <p className="mt-2 text-xs leading-5 text-white/45">
-                  Premium StudyPacks usually take 1–5 minutes because the system is building tutor-level explanations, assessment strategy, rapid recall systems and model answers — not just summarizing notes.
-                </p>
-              </div>
-
-              <div className="grid gap-5 lg:grid-cols-[0.82fr_1.18fr]">
-                <div className="min-h-[470px] rounded-3xl border border-white/10 bg-black/20 p-5">
-                  <div className="mb-5 text-sm font-black uppercase tracking-[0.2em] text-white/40">
-                    Generation Progress
-                  </div>
-
-                  <div className="space-y-3">
-                    {(status?.completed_steps || []).map((step) => (
-                      <div
-                        key={step}
-                        className="flex items-center gap-3 rounded-2xl border border-emerald-300/15 bg-emerald-300/10 px-4 py-3 text-sm text-emerald-100"
-                      >
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-xs font-black text-black">
-                          ✓
-                        </span>
-
-                        {step}
-                      </div>
-                    ))}
-
-                    <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm font-bold text-cyan-100">
-                      <span className="h-3 w-3 animate-pulse rounded-full bg-cyan-300" />
-
-                      {status?.active_step || "Generating"}
-
-                      <span className="ml-auto flex gap-1">
-                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-200 [animation-delay:-0.3s]" />
-                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-200 [animation-delay:-0.15s]" />
-                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-200" />
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-8 rounded-3xl border border-indigo-300/15 bg-indigo-300/10 p-5">
-                    <div className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-indigo-100/50">
-                      Live Tutor Intelligence
-                    </div>
-
-                    <p className="text-lg font-bold leading-8 text-indigo-50">
-                      {liveInsight}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="min-h-[470px] rounded-3xl border border-white/10 bg-black/20 p-5">
-                  <div className="mb-5 text-sm font-black uppercase tracking-[0.2em] text-white/40">
-                    Generated Components
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {generatedComponents.map((x) => (
-                      <div
-                        key={x.label}
-                        className={
-                          x.active
-                            ? "rounded-2xl border border-emerald-300/15 bg-emerald-300/10 p-4 text-emerald-50 transition-all duration-700"
-                            : "rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-white/35 transition-all duration-700"
-                        }
-                      >
-                        <div className="flex items-center gap-3 text-sm font-bold">
-                          <span
-                            className={
-                              x.active
-                                ? "flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-xs font-black text-black shadow-[0_0_20px_rgba(52,211,153,.45)]"
-                                : "h-2.5 w-2.5 rounded-full bg-white/25"
-                            }
-                          >
-                            {x.active ? "✓" : ""}
-                          </span>
-
-                          {x.label}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-7 rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-                    <div className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-white/40">
-                      Live Pack Metrics
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {metrics.map((x) => (
-                        <div
-                          key={x.label}
-                          className="rounded-2xl border border-white/10 bg-black/20 p-4"
-                        >
-                          <div className="text-3xl font-black">{x.value}</div>
-
-                          <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
-                            {x.label}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-7 rounded-3xl border border-fuchsia-300/10 bg-gradient-to-br from-fuchsia-500/10 to-cyan-500/10 p-5">
-                    <div className="text-xs font-black uppercase tracking-[0.2em] text-white/40">
-                      Preview and Premium
-                    </div>
-
-                    <div className="mt-3 text-lg font-bold leading-8 text-white">
-                      The premium StudyPack is created first. The free preview is then built from the same PDF, so both versions always match.
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
-          </div>
-        )}
 
-        {(isComplete || isFailed) && (
-          <div className="flex flex-1 items-center justify-center">
-            <div className="w-full max-w-3xl rounded-[2.4rem] border border-white/10 bg-white/[0.07] p-8 text-center shadow-2xl backdrop-blur-xl md:p-12">
-              {isComplete ? (
-                <>
-                  <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-300 text-5xl font-black text-black shadow-[0_0_50px_rgba(52,211,153,.45)]">
-                    ✓
-                  </div>
+            <div className="mt-6 max-w-3xl rounded-3xl border border-orange-300/15 bg-orange-300/10 p-5">
 
-                  <h2 className="text-5xl font-black">StudyPack Ready</h2>
+              <div className="text-sm font-black uppercase tracking-[0.2em] text-orange-100/80">
+                Best Results
+              </div>
 
-                  <p className="mx-auto mt-4 max-w-xl text-white/60">
-                    Completed in{" "}
-                    <span className="font-bold text-white">
-                      {formatElapsed(elapsed)}
-                    </span>
-                  </p>
+              <p className="mt-2 text-sm leading-6 text-white/65">
+                Smaller focused uploads produce better StudyPacks.
+                Use one week at a time: lecture transcript first,
+                lecture slides if available.
+              </p>
 
-                  <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                    <a
-                      href={absoluteUrl(status?.preview_download_url)}
-                      className="rounded-2xl border border-white/10 bg-white/10 px-5 py-4 text-sm font-black text-white transition hover:bg-white/15"
-                    >
-                      Download Free Preview
-                    </a>
-
-                    <a
-                      href={absoluteUrl(status?.premium_download_url)}
-                      className="rounded-2xl bg-white px-5 py-4 text-sm font-black text-black transition hover:scale-[1.01]"
-                    >
-                      Unlock Premium
-                    </a>
-                  </div>
-
-                  <p className="mx-auto mt-4 max-w-xl text-xs leading-5 text-white/40">
-                    Free preview shows the opening pages and a locked premium page. Full premium access will be connected to credits in the next release.
-                  </p>
-
-                  <button
-                    onClick={resetToStart}
-                    className="mt-5 w-full rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-cyan-50 transition hover:bg-cyan-300/15"
-                  >
-                    Create Another Pack
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-400 text-4xl font-black text-black">
-                    !
-                  </div>
-
-                  <h2 className="text-4xl font-black">Generation Failed</h2>
-
-                  <p className="mx-auto mt-4 whitespace-pre-line text-left text-sm leading-6 text-white/65">
-                    {error ||
-                      status?.message ||
-                      "Please check your upload and try again with a focused weekly lecture transcript and optional slides."}
-                  </p>
-
-                  <button
-                    onClick={resetToStart}
-                    className="mt-7 w-full rounded-2xl bg-white px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-black transition hover:scale-[1.01]"
-                  >
-                    Back to Upload
-                  </button>
-                </>
-              )}
             </div>
+
           </div>
-        )}
-      </section>
 
-      <style jsx global>{`
-        @keyframes shimmer {
-          0% {
-            transform: translateX(-120%);
-          }
-
-          100% {
-            transform: translateX(120%);
-          }
-        }
-      `}</style>
-    </main>
-  );
-}
-
-function UploadGuidance() {
-  return (
-    <div className="mt-5 rounded-3xl border border-white/10 bg-black/20 p-4">
-      <div className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-white/40">
-        Upload Guide
-      </div>
-
-      <div className="grid gap-3 text-sm md:grid-cols-2">
-        <div className="rounded-2xl border border-emerald-300/15 bg-emerald-300/10 p-4">
-          <div className="font-black text-emerald-100">Upload</div>
-          <ul className="mt-2 space-y-1 text-emerald-50/85">
-            <li>✓ Weekly lecture transcript</li>
-            <li>✓ Lecture slides, if available</li>
-          </ul>
-        </div>
-
-        <div className="rounded-2xl border border-red-300/15 bg-red-300/10 p-4">
-          <div className="font-black text-red-100">Avoid</div>
-          <ul className="mt-2 space-y-1 text-red-50/85">
-            <li>✗ Textbooks</li>
-            <li>✗ Full semester folders</li>
-            <li>✗ Unrelated readings</li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/10 p-3 text-xs leading-5 text-cyan-50/85">
-        Limits: up to {MAX_FILES} files, {MAX_FILE_MB}MB per file, {MAX_TOTAL_MB}MB total, and approximately {MAX_EXTRACTED_WORDS.toLocaleString()} extracted words. These limits protect quality and keep StudyPacks focused.
-      </div>
-    </div>
-  );
-}
-
-function SelectedFiles({
-  files,
-  totalBytes,
-}: {
-  files: File[];
-  totalBytes: number;
-}) {
-  return (
-    <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs text-white/55">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <span>
-          {files.length} file{files.length !== 1 ? "s" : ""} selected
-        </span>
-        <span>{formatMb(totalBytes)} total</span>
-      </div>
-
-      <div className="space-y-2">
-        {files.map((f) => (
-          <div
-            key={`${f.name}-${f.size}`}
-            className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.04] px-3 py-2"
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-[2rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl backdrop-blur-xl md:p-8"
           >
-            <span className="truncate">{f.name}</span>
-            <span className="shrink-0 text-white/35">{formatMb(f.size)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-white/40">
-        {label}
-      </label>
+            <h2 className="text-3xl font-black">
+              Create StudyPack
+            </h2>
 
-      {children}
-    </div>
-  );
-}
+            <p className="mt-2 text-sm text-white/50">
+              Topic detection is automatic.
+              Focused weekly uploads create the best results.
+            </p>
 
-function MetricPill({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-black/25 px-5 py-4 text-center">
-      <div className="text-3xl font-black">{value}</div>
+            <div className="mt-6 space-y-4">
 
-      <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
-        {label}
-      </div>
-    </div>
+              <input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="e.g. CRIM335 or LAW399"
+                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/25"
+              />
+
+              <input
+                value={week}
+                onChange={(e) => setWeek(e.target.value)}
+                placeholder="e.g. Week 3"
+                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/25"
+              />
+
+              <input
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="Topic override (optional)"
+                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/25"
+              />
+
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.txt,.pptx,.docx"
+                onChange={(e) => {
+                  const selected = Array.from(e.target.files || []);
+                  setFiles(selected);
+                }}
+                className="w-full cursor-pointer rounded-2xl border border-dashed border-white/15 bg-black/20 px-4 py-5 text-sm text-white/70 file:mr-4 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-bold file:text-black"
+              />
+
+              {error && (
+                <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-100">
+                  {error}
+                </div>
+              )}
+
+              <button
+                disabled={!canSubmit}
+                className={
+                  canSubmit
+                    ? "w-full rounded-2xl bg-white px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-black transition hover:scale-[1.01]"
+                    : "w-full cursor-not-allowed rounded-2xl bg-white/25 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-white/40"
+                }
+              >
+                {isSubmitting ? "Starting..." : "Generate StudyPack"}
+              </button>
+
+              <p className="text-center text-xs leading-5 text-white/35">
+                Powered by StudyPack.ai • studypack.ai
+              </p>
+
+            </div>
+
+          </form>
+
+        </div>
+
+      </section>
+    </main>
   );
 }
