@@ -1,19 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const progressStages = [
+  "Uploading lecture files...",
+  "Extracting transcript and slide content...",
+  "Reading lecture structure...",
+  "Building your Study Pack...",
+  "Generating revision questions...",
+  "Rendering PDF...",
+  "Almost ready...",
+];
 
 export default function Home() {
-  const [subject, setSubject] = useState("CRIM324");
-  const [week, setWeek] = useState("Week 6");
-  const [topic, setTopic] = useState("Prison Privatisation and the Prison Industrial Complex");
+  const [subject, setSubject] = useState("");
+  const [week, setWeek] = useState("");
+  const [topic, setTopic] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
+
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState("");
   const [downloadUrl, setDownloadUrl] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!loading) return;
+
+    setProgress(8);
+    setStage(progressStages[0]);
+
+    const interval = setInterval(() => {
+      setProgress((current) => {
+        const next = Math.min(current + Math.random() * 8, 92);
+        const stageIndex = Math.min(
+          Math.floor((next / 100) * progressStages.length),
+          progressStages.length - 1
+        );
+        setStage(progressStages[stageIndex]);
+        return next;
+      });
+    }, 1800);
+
+    return () => clearInterval(interval);
+  }, [loading]);
 
   async function generatePack() {
     setError("");
     setDownloadUrl("");
+
+    if (!subject.trim() || !week.trim() || !topic.trim()) {
+      setError("Enter subject, week and topic.");
+      return;
+    }
 
     if (!files || files.length === 0) {
       setError("Upload at least one lecture file.");
@@ -21,9 +60,9 @@ export default function Home() {
     }
 
     const form = new FormData();
-    form.append("subject", subject);
-    form.append("week", week);
-    form.append("topic", topic);
+    form.append("subject", subject.trim());
+    form.append("week", week.trim());
+    form.append("topic", topic.trim());
 
     Array.from(files).forEach((file) => {
       form.append("files", file);
@@ -42,9 +81,14 @@ export default function Home() {
       }
 
       const data = await res.json();
+
+      setProgress(100);
+      setStage("Study Pack ready.");
       setDownloadUrl(`/api/studypack/download/${data.job_id}`);
     } catch (err: any) {
       setError(err.message || "Generation failed.");
+      setProgress(0);
+      setStage("");
     } finally {
       setLoading(false);
     }
@@ -57,12 +101,15 @@ export default function Home() {
           <p className="uppercase tracking-[0.3em] text-sm text-neutral-500 font-bold">
             StudyPack.ai
           </p>
+
           <h1 className="text-5xl font-black mt-4 leading-tight">
             Turn lecture files into beautiful Study Packs.
           </h1>
+
           <p className="text-lg text-neutral-700 mt-5">
-            Upload transcripts, slides, PDFs or notes. StudyPack generates a structured PDF with summaries,
-            expanded notes, revision material, questions and answers.
+            Upload transcripts, slides, PDFs or notes. StudyPack generates a
+            structured PDF with summaries, expanded notes, revision material,
+            questions and answers.
           </p>
         </div>
 
@@ -83,7 +130,7 @@ export default function Home() {
               value={week}
               onChange={(e) => setWeek(e.target.value)}
               className="w-full border rounded-xl px-4 py-3"
-              placeholder="e.g. Week 6"
+              placeholder="e.g. Week 9"
             />
           </div>
 
@@ -93,7 +140,7 @@ export default function Home() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               className="w-full border rounded-xl px-4 py-3"
-              placeholder="e.g. Prison Privatisation"
+              placeholder="e.g. Prison Oversight and Human Rights"
             />
           </div>
 
@@ -107,7 +154,8 @@ export default function Home() {
               className="w-full border rounded-xl px-4 py-4 bg-neutral-50"
             />
             <p className="text-sm text-neutral-500 mt-2">
-              You can upload multiple lecture parts, transcripts and slide decks.
+              Upload as many lecture parts, transcripts and slide decks as
+              needed.
             </p>
           </div>
 
@@ -118,6 +166,27 @@ export default function Home() {
           >
             {loading ? "Generating Study Pack..." : "Generate Study Pack"}
           </button>
+
+          {loading && (
+            <div className="space-y-3">
+              <div className="w-full h-4 bg-neutral-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-black transition-all duration-700"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+
+              <div className="flex justify-between text-sm text-neutral-600">
+                <span>{stage}</span>
+                <span>{Math.round(progress)}%</span>
+              </div>
+
+              <p className="text-xs text-neutral-500">
+                Large PowerPoint files can take a few minutes. Please keep this
+                page open.
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-4 text-sm">
