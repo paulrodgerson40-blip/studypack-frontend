@@ -438,21 +438,21 @@ export default function Home() {
             <img
               src="/studypack-icon.png"
               alt="StudyPack.ai"
-              className="h-11 w-11 rounded-2xl object-contain shadow-[0_0_30px_rgba(99,102,241,0.25)]"
+              className="h-10 w-10 rounded-xl object-contain shadow-[0_0_26px_rgba(99,102,241,0.22)]"
             />
 
             <div>
-              <div className="text-sm font-black uppercase tracking-[0.35em] text-white/70">
+              <div className="text-[15px] font-black uppercase tracking-[0.3em] text-white/75">
                 StudyPack.ai
               </div>
 
-              <div className="mt-2 text-xs text-white/45">
+              <div className="mt-1.5 text-xs font-medium text-white/38">
                 Premium AI tutor-grade university study packs
               </div>
             </div>
           </div>
 
-          <div className="hidden rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-bold text-white/70 backdrop-blur md:block">
+          <div className="hidden rounded-full border border-white/10 bg-white/[0.045] px-4 py-2 text-xs font-bold text-white/62 backdrop-blur md:block">
             {API_VERSION}
           </div>
         </header>
@@ -460,7 +460,7 @@ export default function Home() {
         {!isGenerating && !isComplete && !isFailed && (
           <div className="grid flex-1 items-center gap-10 lg:grid-cols-[1.08fr_0.92fr]">
             <div>
-              <div className="mb-5 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-100">
+              <div className="mb-5 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-black text-cyan-50 shadow-[0_0_32px_rgba(103,232,249,0.08)]">
                 Built for quizzes, assignments and exams
               </div>
 
@@ -468,7 +468,7 @@ export default function Home() {
                 Your new elite university study system.
               </h1>
 
-              <p className="mt-7 max-w-2xl text-lg leading-8 text-white/60">
+              <p className="mt-7 max-w-2xl text-lg font-medium leading-8 text-white/58">
                 Upload your weekly lecture transcript and lecture slides to create a premium tutor-style StudyPack with assessment focus, deep explanations, rapid revision and model answers.
               </p>
 
@@ -480,7 +480,7 @@ export default function Home() {
                 ].map((x) => (
                   <div
                     key={x}
-                    className="rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-sm font-bold text-white/80 backdrop-blur"
+                    className="rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-sm font-black text-white/78 backdrop-blur"
                   >
                     {x}
                   </div>
@@ -499,7 +499,7 @@ export default function Home() {
 
             <form
               onSubmit={handleSubmit}
-              className="rounded-[2rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl backdrop-blur-xl md:p-8"
+              className="rounded-[2rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl shadow-black/30 backdrop-blur-xl md:p-8"
             >
               <h2 className="text-3xl font-black">Create StudyPack</h2>
 
@@ -547,7 +547,7 @@ export default function Home() {
                       setFiles(selected);
                       setError("");
                     }}
-                    className="w-full cursor-pointer rounded-2xl border border-dashed border-white/15 bg-black/20 px-4 py-5 text-sm text-white/70 file:mr-4 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-bold file:text-black"
+                    className="w-full cursor-pointer rounded-2xl border border-dashed border-white/15 bg-black/25 px-4 py-5 text-sm text-white/70 outline-none transition hover:border-cyan-300/35 hover:bg-black/30 file:mr-4 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-black file:text-black"
                   />
 
                   <div className="mt-3 text-xs leading-5 text-white/40">
