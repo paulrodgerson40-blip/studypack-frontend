@@ -1,287 +1,206 @@
+cat > /root/studypack/frontend/app/page.tsx <<'EOF'
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 
-const progressStages = [
-  "Uploading lecture files...",
-  "Extracting transcript and slide content...",
-  "Reading lecture structure...",
-  "Building your Study Pack...",
-  "Generating revision questions...",
-  "Rendering PDF...",
-  "Finalising your downloads...",
-];
+const API_BASE =
+  process.env.NEXT_PUBLIC_STUDYPACK_API_BASE || "http://170.64.209.149:8000";
 
-const finalStages = [
-  "Still working — generating detailed notes...",
-  "Still working — building model answers...",
-  "Still working — rendering your PDFs...",
-  "Almost done — large files can take a few minutes...",
-];
+type GenerateResult = {
+  ok: boolean;
+  job_id: string;
+  files_processed: number;
+  preview_download_url?: string;
+  premium_download_url?: string;
+};
 
 export default function Home() {
   const [subject, setSubject] = useState("");
   const [week, setWeek] = useState("");
   const [topic, setTopic] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
-
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [stage, setStage] = useState("");
-  const [finalStageIndex, setFinalStageIndex] = useState(0);
-
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [premiumUrl, setPremiumUrl] = useState("");
+  const [progressText, setProgressText] = useState("");
+  const [result, setResult] = useState<GenerateResult | null>(null);
   const [error, setError] = useState("");
 
-  const selectedFileNames = useMemo(() => {
-    if (!files || files.length === 0) return [];
-    return Array.from(files).map((file) => file.name);
-  }, [files]);
-
-  useEffect(() => {
-    if (!loading) return;
-
-    setProgress(6);
-    setStage(progressStages[0]);
-    setFinalStageIndex(0);
-
-    const interval = setInterval(() => {
-      setProgress((current) => {
-        const next = Math.min(current + Math.random() * 7, 94);
-
-        const stageIndex = Math.min(
-          Math.floor((next / 100) * progressStages.length),
-          progressStages.length - 1
-        );
-
-        if (next >= 90) {
-          setFinalStageIndex((old) => (old + 1) % finalStages.length);
-          setStage(finalStages[finalStageIndex]);
-        } else {
-          setStage(progressStages[stageIndex]);
-        }
-
-        return next;
-      });
-    }, 1800);
-
-    return () => clearInterval(interval);
-  }, [loading, finalStageIndex]);
-
-  async function generatePack() {
+  async function handleGenerate() {
     setError("");
-    setPreviewUrl("");
-    setPremiumUrl("");
+    setResult(null);
 
     if (!subject.trim() || !week.trim() || !topic.trim()) {
-      setError("Enter subject, week and topic.");
+      setError("Please enter subject, week and topic.");
       return;
     }
 
     if (!files || files.length === 0) {
-      setError("Upload at least one lecture file.");
+      setError("Please upload at least one PDF, transcript or course file.");
       return;
     }
 
-    const form = new FormData();
-    form.append("subject", subject.trim());
-    form.append("week", week.trim());
-    form.append("topic", topic.trim());
+    const formData = new FormData();
+    formData.append("subject", subject);
+    formData.append("week", week);
+    formData.append("topic", topic);
 
     Array.from(files).forEach((file) => {
-      form.append("files", file);
+      formData.append("files", file);
     });
 
-    setLoading(true);
-
     try {
-      const res = await fetch("/api/studypack/generate", {
+      setLoading(true);
+      setProgressText("Uploading files and building your Study Pack...");
+
+      const res = await fetch(`${API_BASE}/api/studypack/generate`, {
         method: "POST",
-        body: form,
+        body: formData,
       });
 
       if (!res.ok) {
-        throw new Error(await res.text());
+        throw new Error(`Generation failed: ${res.status}`);
       }
 
-      const data = await res.json();
-
-      setProgress(100);
-      setStage("Study Pack ready.");
-
-      setPreviewUrl(
-        data.preview_download_url ||
-          data.download_url ||
-          `/api/studypack/download/${data.job_id}`
-      );
-
-      setPremiumUrl(
-        data.premium_download_url ||
-          `/api/studypack/download/${data.job_id}?version=premium`
-      );
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Generation failed.";
-      setError(message);
-      setProgress(0);
-      setStage("");
+      const data = (await res.json()) as GenerateResult;
+      setResult(data);
+      setProgressText("Study Pack ready.");
+    } catch (err: any) {
+      setError(err?.message || "Something went wrong.");
+      setProgressText("");
     } finally {
       setLoading(false);
     }
   }
 
-  return (
-    <main className="min-h-screen bg-[#f7f4ef] text-black px-6 py-10">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-10">
-          <p className="uppercase tracking-[0.3em] text-sm text-neutral-500 font-bold">
-            StudyPack.ai
-          </p>
+  const previewUrl = result
+    ? `${API_BASE}/api/studypack/download/${result.job_id}?version=preview&t=${Date.now()}`
+    : "";
 
-          <h1 className="text-5xl font-black mt-4 leading-tight">
-            Turn lecture files into beautiful Study Packs.
+  const premiumUrl = result
+    ? `${API_BASE}/api/studypack/download/${result.job_id}?version=premium&t=${Date.now()}`
+    : "";
+
+  return (
+    <main className="min-h-screen bg-[#070707] text-white">
+      <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-6 py-12">
+        <div className="mb-10">
+          <div className="mb-4 text-sm font-bold uppercase tracking-[0.35em] text-orange-400">
+            StudyPack.ai
+          </div>
+
+          <h1 className="max-w-4xl text-5xl font-black tracking-tight md:text-7xl">
+            Turn lecture files into elite exam-ready study packs.
           </h1>
 
-          <p className="text-lg text-neutral-700 mt-5">
-            Upload transcripts, slides, PDFs or notes. StudyPack generates a
-            structured PDF with summaries, expanded notes, revision material,
-            questions and answers.
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
+            Upload your course material and generate both a free preview and a
+            premium full Study Pack for testing.
           </p>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl p-6 space-y-5 border border-neutral-200">
-          <div>
-            <label className="font-bold block mb-2">Subject</label>
+        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl backdrop-blur">
+          <div className="grid gap-4 md:grid-cols-3">
             <input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full border rounded-xl px-4 py-3"
-              placeholder="e.g. CRIM324"
+              placeholder="Subject e.g. CRIM324"
+              className="rounded-2xl border border-white/10 bg-black px-4 py-4 text-white outline-none focus:border-orange-400"
             />
-          </div>
 
-          <div>
-            <label className="font-bold block mb-2">Week</label>
             <input
               value={week}
               onChange={(e) => setWeek(e.target.value)}
-              className="w-full border rounded-xl px-4 py-3"
-              placeholder="e.g. Week 9"
+              placeholder="Week e.g. Week 9"
+              className="rounded-2xl border border-white/10 bg-black px-4 py-4 text-white outline-none focus:border-orange-400"
             />
-          </div>
 
-          <div>
-            <label className="font-bold block mb-2">Topic</label>
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              className="w-full border rounded-xl px-4 py-3"
-              placeholder="e.g. Prison Oversight and Human Rights"
+              placeholder="Topic e.g. Prisoners Rights"
+              className="rounded-2xl border border-white/10 bg-black px-4 py-4 text-white outline-none focus:border-orange-400"
             />
           </div>
 
-          <div>
-            <label className="font-bold block mb-2">Upload files</label>
+          <div className="mt-5 rounded-2xl border border-dashed border-white/20 bg-black p-5">
+            <label className="block text-sm font-bold text-zinc-200">
+              Upload lecture PDFs, slides, transcripts or notes
+            </label>
+
             <input
               type="file"
               multiple
-              accept=".txt,.pdf,.pptx,.docx"
               onChange={(e) => setFiles(e.target.files)}
-              className="w-full border rounded-xl px-4 py-4 bg-neutral-50"
+              className="mt-3 block w-full cursor-pointer rounded-xl border border-white/10 bg-zinc-950 p-3 text-sm text-zinc-300 file:mr-4 file:rounded-full file:border-0 file:bg-orange-500 file:px-4 file:py-2 file:font-bold file:text-black"
             />
 
-            <p className="text-sm text-neutral-500 mt-2">
-              Upload as many lecture parts, transcripts and slide decks as
-              needed.
-            </p>
-
-            {selectedFileNames.length > 0 && (
-              <div className="mt-3 rounded-xl border bg-neutral-50 p-3">
-                <p className="text-sm font-bold mb-2">
-                  Selected files ({selectedFileNames.length})
-                </p>
-                <ul className="text-sm text-neutral-700 space-y-1">
-                  {selectedFileNames.map((name) => (
-                    <li key={name} className="truncate">
-                      {name}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {files && files.length > 0 && (
+              <p className="mt-3 text-sm text-zinc-400">
+                {files.length} file(s) selected.
+              </p>
             )}
           </div>
 
-          <button
-            onClick={generatePack}
-            disabled={loading}
-            className="w-full rounded-2xl bg-black text-white py-4 font-black text-lg disabled:opacity-50"
-          >
-            {loading ? "Generating Study Pack..." : "Generate Study Pack"}
-          </button>
-
-          {loading && (
-            <div className="space-y-3">
-              <div className="w-full h-4 bg-neutral-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-black transition-all duration-700"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-
-              <div className="flex justify-between text-sm text-neutral-600">
-                <span>{stage}</span>
-                <span>{Math.round(progress)}%</span>
-              </div>
-
-              {progress >= 90 && (
-                <p className="text-sm text-orange-700 font-semibold animate-pulse">
-                  Finalising your Study Pack. Large lecture files can take a few
-                  minutes — please keep this page open.
-                </p>
-              )}
-
-              <p className="text-xs text-neutral-500">
-                StudyPack is reading your files, building expanded notes,
-                generating questions and rendering your PDFs.
-              </p>
-            </div>
-          )}
-
           {error && (
-            <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-4 text-sm whitespace-pre-wrap">
+            <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
               {error}
             </div>
           )}
 
-          {(previewUrl || premiumUrl) && (
-            <div className="grid gap-3">
-              {previewUrl && (
-                <a
-                  href={previewUrl}
-                  className="block text-center rounded-2xl bg-neutral-900 text-white py-4 font-black text-lg"
-                >
-                  Download Free Preview PDF
-                </a>
-              )}
+          {progressText && (
+            <div className="mt-4 rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 text-sm text-orange-100">
+              {progressText}
+            </div>
+          )}
 
-              {premiumUrl && (
-                <a
-                  href={premiumUrl}
-                  className="block text-center rounded-2xl bg-green-600 text-white py-4 font-black text-lg"
-                >
-                  Download Premium Test PDF
-                </a>
-              )}
+          <button
+            onClick={handleGenerate}
+            disabled={loading}
+            className="mt-6 w-full rounded-2xl bg-orange-500 px-6 py-5 text-lg font-black text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? "Generating Study Pack..." : "Generate Study Pack"}
+          </button>
 
-              <p className="text-xs text-neutral-500 text-center">
-                For testing, both preview and premium downloads are shown. Later,
-                premium will require subscription access.
-              </p>
+          {result && (
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl border border-white/10 bg-zinc-900 p-5 text-center font-black text-white transition hover:bg-zinc-800"
+              >
+                Download Free Preview
+              </a>
+
+              <a
+                href={premiumUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl bg-white p-5 text-center font-black text-black transition hover:bg-orange-100"
+              >
+                Download Premium Full Pack
+              </a>
             </div>
           )}
         </div>
-      </div>
+
+        <div className="mt-8 grid gap-4 text-sm text-zinc-400 md:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <strong className="text-white">Free Preview</strong>
+            <p className="mt-2">Summary, topic map, key concepts and locked premium sections.</p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <strong className="text-white">Premium Pack</strong>
+            <p className="mt-2">Expanded notes, model answers, revision sheet, glossary and cram sheet.</p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <strong className="text-white">Test Mode</strong>
+            <p className="mt-2">Both buttons are available now so you can compare outputs.</p>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
+EOF
