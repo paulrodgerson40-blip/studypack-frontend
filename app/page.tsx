@@ -242,6 +242,20 @@ export default function Home() {
     }
   }
 
+  function resetToStart() {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+
+    setStatus(null);
+    setDisplayProgress(0);
+    setElapsed(0);
+    setIsSubmitting(false);
+    setError("");
+    setFiles([]);
+  }
+
   const generatedComponents = [
     {
       label: "Assessment Hotspots",
@@ -674,6 +688,13 @@ export default function Home() {
                       Download Premium
                     </a>
                   </div>
+
+                  <button
+                    onClick={resetToStart}
+                    className="mt-5 w-full rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-cyan-50 transition hover:bg-cyan-300/15"
+                  >
+                    Create Another Pack
+                  </button>
                 </>
               ) : (
                 <>
