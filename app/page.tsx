@@ -1,4 +1,3 @@
-cat > /root/studypack/frontend/app/page.tsx <<'EOF'
 "use client";
 
 import { useState } from "react";
@@ -10,8 +9,6 @@ type GenerateResult = {
   ok: boolean;
   job_id: string;
   files_processed: number;
-  preview_download_url?: string;
-  premium_download_url?: string;
 };
 
 export default function Home() {
@@ -34,7 +31,7 @@ export default function Home() {
     }
 
     if (!files || files.length === 0) {
-      setError("Please upload at least one PDF, transcript or course file.");
+      setError("Please upload at least one file.");
       return;
     }
 
@@ -63,8 +60,12 @@ export default function Home() {
       const data = (await res.json()) as GenerateResult;
       setResult(data);
       setProgressText("Study Pack ready.");
-    } catch (err: any) {
-      setError(err?.message || "Something went wrong.");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Something went wrong.");
+      }
       setProgressText("");
     } finally {
       setLoading(false);
@@ -182,25 +183,7 @@ export default function Home() {
             </div>
           )}
         </div>
-
-        <div className="mt-8 grid gap-4 text-sm text-zinc-400 md:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <strong className="text-white">Free Preview</strong>
-            <p className="mt-2">Summary, topic map, key concepts and locked premium sections.</p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <strong className="text-white">Premium Pack</strong>
-            <p className="mt-2">Expanded notes, model answers, revision sheet, glossary and cram sheet.</p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <strong className="text-white">Test Mode</strong>
-            <p className="mt-2">Both buttons are available now so you can compare outputs.</p>
-          </div>
-        </div>
       </section>
     </main>
   );
 }
-EOF
