@@ -384,7 +384,7 @@ export default function Home() {
 
           <div>
             {isSignedIn ? (
-              <UserButton afterSignOutUrl="/" />
+              <UserButton />
             ) : (
               <SignInButton mode="modal">
                 <button className="rounded-xl border border-white/15 bg-white/8 px-5 py-2.5 text-sm font-bold text-white/80 transition hover:bg-white/12">
