@@ -13,8 +13,6 @@ const MAX_FILE_MB = 5;
 const MAX_TOTAL_MB = 20;
 const MAX_EXTRACTED_WORDS = 35000;
 const acceptedExtensions = [".pdf", ".docx", ".pptx", ".txt"];
-
-// Actual observed timing: ~10s extract, ~170s generate, ~7s render = ~187s total
 const ESTIMATED_TOTAL_SECONDS = 190;
 
 type JobStatus = {
@@ -46,19 +44,13 @@ type JobStatus = {
   };
 };
 
-// REAL stages matching the actual 2-call backend pipeline
-type StageKey =
-  | "upload"
-  | "extract"
-  | "generating"
-  | "rendering"
-  | "complete";
+type StageKey = "upload" | "extract" | "generating" | "rendering" | "complete";
 
 const stagePlan: Array<{
   key: StageKey;
   label: string;
   detail: string;
-  estimatedStart: number; // seconds from job start
+  estimatedStart: number;
   estimatedEnd: number;
 }> = [
   {
@@ -70,45 +62,45 @@ const stagePlan: Array<{
   },
   {
     key: "extract",
-    label: "Reading and analysing material",
-    detail: "Extracting text and mapping assessment themes from your lecture material.",
+    label: "Reading material",
+    detail: "Extracting text and mapping assessment themes from your lecture files.",
     estimatedStart: 8,
     estimatedEnd: 22,
   },
   {
     key: "generating",
-    label: "Writing your StudyPack",
-    detail: "GPT-5.4 is writing tutor notes, hotspots, model answers, revision and attack sheets from your material. This takes 2–3 minutes.",
+    label: "Writing StudyPack",
+    detail: "GPT-5.4 is writing your complete study system from the uploaded material.",
     estimatedStart: 22,
     estimatedEnd: 178,
   },
   {
     key: "rendering",
-    label: "Rendering premium PDF",
-    detail: "Building the final premium PDF and locked preview.",
+    label: "Rendering PDF",
+    detail: "Building the premium PDF and locked preview.",
     estimatedStart: 178,
-    estimatedEnd: 188,
-  },
-  {
-    key: "complete",
-    label: "StudyPack ready",
-    detail: "Your premium StudyPack is ready to download.",
-    estimatedStart: 188,
     estimatedEnd: 190,
   },
 ];
 
-// Rotating insights shown during the long AI writing phase
-const generatingInsights = [
-  "Writing assessment hotspots from your uploaded lecture...",
-  "Building tutor-grade explanations, not generic summaries...",
-  "Crafting model answers anchored to your material...",
-  "Identifying the traps students fall into in this topic...",
+const aiInsights = [
+  "Writing assessment hotspots from your lecture...",
+  "Building tutor-grade explanations, not summaries...",
+  "Crafting model answers from your material...",
+  "Identifying the traps students fall into...",
   "Writing HD insights and rapid recall triggers...",
-  "Building critical debates from the lecture material...",
+  "Building critical debates from the lecture...",
   "Composing quiz checks and revision blocks...",
   "Assembling the one-page attack sheet...",
-  "Almost there — finalising your study system...",
+  "Finalising your complete study system...",
+];
+
+const aiChecklist = [
+  { label: "7 assessment hotspots", elapsed: 40 },
+  { label: "6 deep tutor notes", elapsed: 75 },
+  { label: "Critical debates + quiz", elapsed: 105 },
+  { label: "2 full model answers", elapsed: 135 },
+  { label: "Attack sheet + glossary", elapsed: 160 },
 ];
 
 function clamp(n?: number) {
@@ -117,16 +109,16 @@ function clamp(n?: number) {
 }
 
 function formatElapsed(seconds: number) {
-  const mins = Math.floor(seconds / 60).toString().padStart(2, "0");
-  const secs = Math.floor(seconds % 60).toString().padStart(2, "0");
-  return `${mins}:${secs}`;
+  const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+  const s = Math.floor(seconds % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
 }
 
 function timestampToMs(value?: string | number | null) {
   if (!value) return null;
   if (typeof value === "number") return value < 10_000_000_000 ? value * 1000 : value;
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? null : parsed;
+  const p = Date.parse(value);
+  return Number.isNaN(p) ? null : p;
 }
 
 function getStatusStartMs(data?: JobStatus | null) {
@@ -154,9 +146,9 @@ function absoluteUrl(path?: string) {
 }
 
 function fileExt(name: string) {
-  const lower = name.toLowerCase();
-  const dot = lower.lastIndexOf(".");
-  return dot >= 0 ? lower.slice(dot) : "";
+  const l = name.toLowerCase();
+  const d = l.lastIndexOf(".");
+  return d >= 0 ? l.slice(d) : "";
 }
 
 function formatMb(bytes: number) {
@@ -166,53 +158,37 @@ function formatMb(bytes: number) {
 function extractFriendlyError(data: any, fallback: string) {
   if (!data) return fallback;
   if (typeof data?.detail === "string") return data.detail;
-  if (data?.detail?.message) {
+  if (data?.detail?.message)
     return [data.detail.message, data.detail.detail, data.detail.guidance].filter(Boolean).join("\n\n");
-  }
   if (data?.error) return data.error;
   if (data?.message) return data.message;
   return fallback;
 }
 
-// Infer real stage from backend status + elapsed time
 function inferStage(status: JobStatus | null, elapsed: number): StageKey {
   if (status?.status === "complete") return "complete";
   if (!status || status.status === "queued") return "upload";
-
   const stage = (status.stage || "").toLowerCase();
   const active = (status.active_step || "").toLowerCase();
   const steps = (status.completed_steps || []).join(" ").toLowerCase();
-
-  // Backend explicitly signals render stage
-  if (stage.includes("premium_pdf") || stage.includes("preview_pdf") || active.includes("rendering") || active.includes("pdf")) return "rendering";
-
-  // Content extracted = we're into the AI generation phase
+  if (stage.includes("premium_pdf") || stage.includes("preview_pdf") || active.includes("render")) return "rendering";
   if (steps.includes("content extracted") || steps.includes("upload quality checked")) {
-    // If render is happening
     if (stage.includes("render") || active.includes("render")) return "rendering";
     return "generating";
   }
-
-  // Extract phase
-  if (steps.includes("files received") || stage.includes("extract") || stage.includes("validated") || stage.includes("assessment_detection")) return "extract";
-
-  // Time-based fallback — if we've been running > 18s, we're generating
+  if (steps.includes("files received") || stage.includes("extract") || stage.includes("validated")) return "extract";
   if (elapsed > 18) return "generating";
   if (elapsed > 5) return "extract";
   return "upload";
 }
 
-// Progress calculation: time-based smooth animation
-// Upload: 0-5%, Extract: 5-12%, Generating: 12-88% over ~156s, Rendering: 88-98%, Complete: 100%
-function targetProgress(stage: StageKey, elapsed: number, backendProgress: number): number {
+function targetProgress(stage: StageKey, elapsed: number, backendPct: number): number {
   if (stage === "complete") return 100;
-  if (stage === "rendering") return Math.max(88, Math.min(98, backendProgress));
+  if (stage === "rendering") return Math.max(88, Math.min(98, backendPct));
   if (stage === "generating") {
-    // Smooth progress from 12% to 88% over 156 seconds (elapsed 22-178)
     const genElapsed = Math.max(0, elapsed - 22);
-    const genDuration = 156;
-    const genPct = Math.min(genElapsed / genDuration, 0.92); // cap at 92% of range
-    return Math.max(12, 12 + genPct * 76);
+    const pct = Math.min(genElapsed / 156, 0.93);
+    return Math.max(12, 12 + pct * 76);
   }
   if (stage === "extract") return Math.max(5, Math.min(12, 5 + ((elapsed - 8) / 14) * 7));
   return Math.max(2, Math.min(5, (elapsed / 8) * 5));
@@ -234,97 +210,85 @@ export default function Home() {
   const startedAtRef = useRef<number | null>(null);
   const finalElapsedRef = useRef<number | null>(null);
 
-  const selectedTotalBytes = useMemo(() => files.reduce((sum, f) => sum + f.size, 0), [files]);
+  const selectedTotalBytes = useMemo(
+    () => files.reduce((sum, f) => sum + f.size, 0),
+    [files]
+  );
 
   const fileWarnings = useMemo(() => {
-    const warnings: string[] = [];
-    if (files.length > MAX_FILES) warnings.push(`Please upload up to ${MAX_FILES} focused weekly files only.`);
-    if (selectedTotalBytes > MAX_TOTAL_MB * 1024 * 1024) {
-      warnings.push(`Total upload is ${formatMb(selectedTotalBytes)}. Current limit is ${MAX_TOTAL_MB}MB total.`);
-    }
+    const w: string[] = [];
+    if (files.length > MAX_FILES) w.push(`Max ${MAX_FILES} files.`);
+    if (selectedTotalBytes > MAX_TOTAL_MB * 1024 * 1024)
+      w.push(`Total is ${formatMb(selectedTotalBytes)}. Limit is ${MAX_TOTAL_MB}MB.`);
     files.forEach((f) => {
-      const ext = fileExt(f.name);
-      if (!acceptedExtensions.includes(ext)) warnings.push(`${f.name} is not supported. Use PDF, DOCX, PPTX or TXT.`);
-      if (f.size > MAX_FILE_MB * 1024 * 1024) warnings.push(`${f.name} is ${formatMb(f.size)}. Each file must be ${MAX_FILE_MB}MB or less.`);
+      if (!acceptedExtensions.includes(fileExt(f.name)))
+        w.push(`${f.name} — unsupported type.`);
+      if (f.size > MAX_FILE_MB * 1024 * 1024)
+        w.push(`${f.name} is ${formatMb(f.size)}. Max ${MAX_FILE_MB}MB per file.`);
     });
-    return warnings;
+    return w;
   }, [files, selectedTotalBytes]);
 
-  const canSubmit = !!subject.trim() && !!week.trim() && files.length > 0 && fileWarnings.length === 0 && !isSubmitting;
-  const isGenerating = status?.status === "queued" || status?.status === "processing" || isSubmitting;
+  const canSubmit =
+    !!subject.trim() && !!week.trim() && files.length > 0 && !fileWarnings.length && !isSubmitting;
+  const isGenerating =
+    status?.status === "queued" || status?.status === "processing" || isSubmitting;
   const isComplete = status?.status === "complete";
   const isFailed = status?.status === "failed";
   const backendProgress = clamp(status?.progress);
   const activeStage = inferStage(status, elapsed);
-  const activePlan = stagePlan.find((s) => s.key === activeStage) || stagePlan[0];
-  const detected = status?.detected_sections;
-  const remainingSeconds = Math.max(0, ESTIMATED_TOTAL_SECONDS - elapsed);
+  const activeStageIndex = stagePlan.findIndex((s) => s.key === activeStage);
   const isInAIPhase = activeStage === "generating";
-  const liveInsight = generatingInsights[insightIndex % generatingInsights.length];
+  const liveInsight = aiInsights[insightIndex % aiInsights.length];
+  const detected = status?.detected_sections;
 
-  // Rotate insights every 4s during AI phase
   useEffect(() => {
     if (!isInAIPhase) return;
-    const t = setInterval(() => setInsightIndex((x) => x + 1), 4000);
+    const t = setInterval(() => setInsightIndex((x) => x + 1), 4200);
     return () => clearInterval(t);
   }, [isInAIPhase]);
 
-  // Elapsed timer
   useEffect(() => {
     if (!isGenerating) return;
-    if (!startedAtRef.current) startedAtRef.current = getStatusStartMs(status) || Date.now();
-    const syncElapsed = () => setElapsed(elapsedSecondsFrom(startedAtRef.current));
-    syncElapsed();
-    const t = window.setInterval(syncElapsed, 1000);
+    if (!startedAtRef.current)
+      startedAtRef.current = getStatusStartMs(status) || Date.now();
+    const sync = () => setElapsed(elapsedSecondsFrom(startedAtRef.current));
+    sync();
+    const t = window.setInterval(sync, 1000);
     return () => window.clearInterval(t);
   }, [isGenerating, status?.started_at, status?.created_at]);
 
-  // Smooth progress animation
   useEffect(() => {
-    if (isComplete) {
-      setDisplayProgress(100);
-      return;
-    }
+    if (isComplete) { setDisplayProgress(100); return; }
     if (!isGenerating) return;
-
     const t = window.setInterval(() => {
-      setDisplayProgress((current) => {
-        const target = targetProgress(activeStage, elapsed, backendProgress);
-        if (target > current) return Math.min(target, current + 0.8);
-        return current;
+      setDisplayProgress((cur) => {
+        const tgt = targetProgress(activeStage, elapsed, backendProgress);
+        if (tgt > cur) return Math.min(tgt, cur + 0.7);
+        return cur;
       });
     }, 400);
-
     return () => window.clearInterval(t);
   }, [backendProgress, isGenerating, isComplete, elapsed, activeStage]);
 
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   async function poll(jobId: string) {
     try {
       const res = await fetch(`${API_BASE}/api/studypack/status/${jobId}`, { cache: "no-store" });
       const data = await res.json();
-      const serverStartMs = getStatusStartMs(data);
-      if (serverStartMs && !startedAtRef.current) startedAtRef.current = serverStartMs;
+      const sms = getStatusStartMs(data);
+      if (sms && !startedAtRef.current) startedAtRef.current = sms;
       setStatus(data);
-      if (data.status === "failed") setError(extractFriendlyError(data, "StudyPack generation failed."));
+      if (data.status === "failed") setError(extractFriendlyError(data, "Generation failed."));
       if (data.status === "complete" || data.status === "failed") {
         const endMs = getStatusEndMs(data) || Date.now();
-        const finalElapsed = elapsedSecondsFrom(startedAtRef.current || serverStartMs || endMs, endMs);
-        finalElapsedRef.current = finalElapsed;
-        setElapsed(finalElapsed);
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-        }
+        const fe = elapsedSecondsFrom(startedAtRef.current || sms || endMs, endMs);
+        finalElapsedRef.current = fe;
+        setElapsed(fe);
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       }
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -332,24 +296,16 @@ export default function Home() {
     setError("");
     if (!subject.trim() || !week.trim()) return setError("Please enter your subject and week.");
     if (!files.length) return setError("Please upload your weekly lecture transcript.");
-    if (fileWarnings.length) return setError(fileWarnings.join("\n\n"));
+    if (fileWarnings.length) return setError(fileWarnings.join("\n"));
 
     try {
-      const localStartedAt = Date.now();
-      startedAtRef.current = localStartedAt;
+      const localStart = Date.now();
+      startedAtRef.current = localStart;
       finalElapsedRef.current = null;
       setElapsed(0);
       setDisplayProgress(2);
       setIsSubmitting(true);
-      setStatus({
-        status: "queued",
-        progress: 2,
-        stage: "queued",
-        stage_title: "Preparing StudyPack engine",
-        stage_detail: "Uploading files and starting the academic analysis job.",
-        completed_steps: [],
-        active_step: "Uploading files",
-      });
+      setStatus({ status: "queued", progress: 2 });
 
       const fd = new FormData();
       fd.append("subject", subject);
@@ -361,16 +317,13 @@ export default function Home() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(extractFriendlyError(data, "This upload could not be processed."));
 
-      const serverStartMs = getStatusStartMs(data);
-      if (serverStartMs) {
-        startedAtRef.current = serverStartMs;
-        setElapsed(elapsedSecondsFrom(serverStartMs));
-      }
+      const sms = getStatusStartMs(data);
+      if (sms) { startedAtRef.current = sms; setElapsed(elapsedSecondsFrom(sms)); }
 
       setStatus(data);
       setIsSubmitting(false);
       const id = data.job_id;
-      if (!id) throw new Error("StudyPack started, but no job ID was returned.");
+      if (!id) throw new Error("No job ID returned.");
       pollRef.current = setInterval(() => poll(id), 2000);
       poll(id);
     } catch (err: any) {
@@ -396,295 +349,480 @@ export default function Home() {
     setFiles([]);
   }
 
-  const metrics = [
-    { label: "Hotspots", value: detected?.assessment_hotspots?.toString() || "—" },
-    { label: "Tutor Notes", value: detected?.expanded_notes?.toString() || "—" },
-    { label: "Quiz Checks", value: detected?.quiz_checks?.toString() || "—" },
-    { label: "Practice Qs", value: detected?.practice_questions?.toString() || "—" },
-  ];
-
   return (
-    <main className="min-h-screen overflow-hidden bg-[#040816] text-white">
-      <div className="pointer-events-none fixed inset-0">
-        <div className="absolute left-[-12%] top-[-10%] h-[460px] w-[460px] rounded-full bg-indigo-600/30 blur-[130px]" />
-        <div className="absolute right-[-12%] top-[15%] h-[460px] w-[460px] rounded-full bg-cyan-500/20 blur-[130px]" />
-        <div className="absolute bottom-[-20%] left-[20%] h-[520px] w-[520px] rounded-full bg-fuchsia-500/20 blur-[150px]" />
+    <main className="min-h-screen overflow-hidden bg-[#050818] text-white">
+
+      {/* Background glows */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -left-32 -top-32 h-[600px] w-[600px] rounded-full bg-indigo-700/25 blur-[140px]" />
+        <div className="absolute -right-32 top-24 h-[500px] w-[500px] rounded-full bg-cyan-600/15 blur-[140px]" />
+        <div className="absolute bottom-[-15%] left-[30%] h-[500px] w-[500px] rounded-full bg-violet-700/15 blur-[160px]" />
       </div>
 
-      <section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-8 md:px-10">
-        <header className="mb-10 flex items-center justify-between">
-          <div className="flex items-center gap-5">
-            <img src="/studypack-icon.png" alt="StudyPack.ai" className="h-16 w-16 rounded-2xl shadow-[0_0_30px_rgba(99,102,241,0.22)]" />
+      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-8 md:px-10">
+
+        {/* ── HEADER ── */}
+        <header className="mb-12 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <img
+              src="/studypack-icon.png"
+              alt="StudyPack.ai"
+              className="h-14 w-14 rounded-2xl shadow-[0_0_24px_rgba(91,94,244,0.30)]"
+            />
             <div>
-              <div className="text-[16px] font-black uppercase tracking-[0.42em] text-white/90">STUDYPACK.AI</div>
-              <div className="mt-1 text-sm font-medium text-white/35">Premium AI tutor-grade university study packs</div>
+              <div className="text-[15px] font-black uppercase tracking-[0.38em] text-white">
+                StudyPack.ai
+              </div>
+              <div className="mt-0.5 text-xs font-medium text-white/35">
+                Premium AI tutor-grade university study packs
+              </div>
             </div>
           </div>
-          <div className="hidden rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-bold text-white/70 backdrop-blur md:block">{API_VERSION}</div>
+          <div className="hidden rounded-full border border-white/8 bg-white/[0.05] px-4 py-2 text-[11px] font-semibold text-white/40 backdrop-blur md:block">
+            {API_VERSION}
+          </div>
         </header>
 
-        {/* ── UPLOAD FORM ── */}
+        {/* ── UPLOAD ── */}
         {!isGenerating && !isComplete && !isFailed && (
-          <div className="grid flex-1 items-center gap-10 lg:grid-cols-[1.08fr_0.92fr]">
+          <div className="grid flex-1 items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+
+            {/* Left: Hero */}
             <div>
-              <div className="mb-5 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-black text-cyan-50 shadow-[0_0_32px_rgba(103,232,249,0.08)]">
-                Elite AI study packs · 2-3 minutes
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-400/25 bg-indigo-500/10 px-4 py-2 text-xs font-bold text-indigo-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                GPT-5.4 · 30–38 page premium study book · 2–3 minutes
               </div>
-              <h1 className="max-w-5xl text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
-                Your elite weekly study system.
+
+              <h1 className="text-5xl font-black leading-[0.94] tracking-tight text-white md:text-[72px]">
+                Your elite<br />weekly study<br />system.
               </h1>
-              <p className="mt-7 max-w-2xl text-lg font-medium leading-8 text-white/58">
-                Upload focused weekly lecture material and create a premium tutor-style StudyPack with explanations, assessment training, revision and model answers.
+
+              <p className="mt-6 max-w-lg text-lg leading-8 text-white/50">
+                Upload your weekly lecture material. Get a premium tutor-style StudyPack — hotspots, deep notes, model answers, attack sheet and more.
               </p>
-              <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
-                {["Focused Weekly Uploads", "Tutor-Level Explanations", "Locked Premium Preview"].map((x) => (
-                  <div key={x} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-sm font-black text-white/78 backdrop-blur">{x}</div>
+
+              <div className="mt-10 space-y-3">
+                {[
+                  { icon: "◆", label: "Anchored to your uploaded material", sub: "No hallucination. Every insight from your lecture." },
+                  { icon: "◆", label: "Tutor-grade writing, not AI summaries", sub: "Written like a brilliant private tutor who read your notes." },
+                  { icon: "◆", label: "Assessment-ready from page one", sub: "Hotspots, HD insights, model answers and a cram sheet." },
+                ].map((x) => (
+                  <div key={x.label} className="flex items-start gap-4 rounded-2xl border border-white/6 bg-white/[0.03] px-5 py-4">
+                    <span className="mt-0.5 text-indigo-400">{x.icon}</span>
+                    <div>
+                      <div className="text-sm font-bold text-white/90">{x.label}</div>
+                      <div className="mt-0.5 text-xs leading-5 text-white/38">{x.sub}</div>
+                    </div>
+                  </div>
                 ))}
-              </div>
-              <div className="mt-6 max-w-3xl rounded-3xl border border-orange-300/15 bg-orange-300/10 p-5">
-                <div className="text-sm font-black uppercase tracking-[0.2em] text-orange-100/80">Best Results</div>
-                <p className="mt-2 text-sm leading-6 text-white/65">
-                  Use one week at a time: lecture transcript first, lecture slides if available. Smaller focused uploads create better StudyPacks.
-                </p>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="rounded-[2rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl shadow-black/30 backdrop-blur-xl md:p-8">
-              <h2 className="text-3xl font-black">Create StudyPack</h2>
-              <p className="mt-2 text-sm text-white/50">Topic detection is automatic. Focused weekly uploads create the best results.</p>
-              <UploadGuidance />
-              <div className="mt-6 space-y-4">
-                <Field label="Subject">
-                  <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. CRIM335 or LAW399" className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/25 focus:border-cyan-300/50" />
-                </Field>
-                <Field label="Week">
-                  <input value={week} onChange={(e) => setWeek(e.target.value)} placeholder="e.g. Week 3" className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/25 focus:border-cyan-300/50" />
-                </Field>
-                <Field label="Topic override (optional)">
-                  <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Leave blank for auto-detection" className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/25 focus:border-cyan-300/50" />
-                </Field>
-                <Field label="Upload weekly study files">
+            {/* Right: Form */}
+            <div className="rounded-[2rem] border border-white/10 bg-white/[0.055] p-7 shadow-2xl shadow-black/40 backdrop-blur-xl">
+              <h2 className="text-2xl font-black text-white">Create StudyPack</h2>
+              <p className="mt-1.5 text-sm text-white/40">
+                Upload this week's lecture transcript and slides.
+              </p>
+
+              {/* Upload guide */}
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/8 p-4">
+                  <div className="mb-2 text-xs font-black uppercase tracking-[0.15em] text-emerald-300/80">Upload</div>
+                  <ul className="space-y-1.5 text-xs text-emerald-100/75">
+                    <li className="flex items-center gap-2"><span className="text-emerald-400">✓</span>Weekly lecture transcript</li>
+                    <li className="flex items-center gap-2"><span className="text-emerald-400">✓</span>Lecture slides (optional)</li>
+                  </ul>
+                </div>
+                <div className="rounded-2xl border border-red-400/15 bg-red-400/8 p-4">
+                  <div className="mb-2 text-xs font-black uppercase tracking-[0.15em] text-red-300/80">Avoid</div>
+                  <ul className="space-y-1.5 text-xs text-red-100/75">
+                    <li className="flex items-center gap-2"><span className="text-red-400">✗</span>Textbooks</li>
+                    <li className="flex items-center gap-2"><span className="text-red-400">✗</span>Full semester bundles</li>
+                  </ul>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                <FormField label="Subject">
                   <input
-                    type="file" multiple accept=".pdf,.txt,.pptx,.docx"
-                    onChange={(e) => { setFiles(Array.from(e.target.files || [])); setError(""); }}
-                    className="w-full cursor-pointer rounded-2xl border border-dashed border-white/15 bg-black/25 px-4 py-5 text-sm text-white/70 outline-none transition hover:border-cyan-300/35 hover:bg-black/30 file:mr-4 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-black file:text-black"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="e.g. CRIM335 or LAW399"
+                    className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/22 focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition"
                   />
-                  <div className="mt-3 text-xs leading-5 text-white/40">Accepted: PDF, DOCX, PPTX, TXT. Up to {MAX_FILES} files, {MAX_FILE_MB}MB per file, {MAX_TOTAL_MB}MB total.</div>
-                  {!!files.length && <SelectedFiles files={files} totalBytes={selectedTotalBytes} />}
-                </Field>
+                </FormField>
+
+                <FormField label="Week">
+                  <input
+                    value={week}
+                    onChange={(e) => setWeek(e.target.value)}
+                    placeholder="e.g. Week 3"
+                    className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/22 focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition"
+                  />
+                </FormField>
+
+                <FormField label="Topic override (optional)">
+                  <input
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="Leave blank for auto-detection"
+                    className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/22 focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition"
+                  />
+                </FormField>
+
+                <FormField label="Upload lecture files">
+                  <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-white/15 bg-black/20 px-5 py-6 text-center transition hover:border-indigo-400/35 hover:bg-black/30">
+                    <span className="text-2xl">↑</span>
+                    <span className="text-sm text-white/50">
+                      Drop files or <span className="font-bold text-indigo-300">browse</span>
+                    </span>
+                    <span className="text-xs text-white/28">PDF · DOCX · PPTX · TXT · up to {MAX_FILES} files · {MAX_FILE_MB}MB each</span>
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.txt,.pptx,.docx"
+                      onChange={(e) => { setFiles(Array.from(e.target.files || [])); setError(""); }}
+                      className="hidden"
+                    />
+                  </label>
+                  {!!files.length && (
+                    <div className="mt-3 space-y-1.5">
+                      {files.map((f) => (
+                        <div key={`${f.name}-${f.size}`} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.04] px-3 py-2 text-xs">
+                          <span className="truncate text-white/70">{f.name}</span>
+                          <span className="ml-3 shrink-0 text-white/30">{formatMb(f.size)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </FormField>
+
                 {!!fileWarnings.length && (
-                  <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-sm leading-6 text-amber-50">
-                    <div className="font-black">Upload needs adjustment</div>
-                    <ul className="mt-2 list-disc space-y-1 pl-5">{fileWarnings.map((w) => <li key={w}>{w}</li>)}</ul>
+                  <div className="rounded-xl border border-amber-400/20 bg-amber-400/8 p-4 text-sm text-amber-100">
+                    <div className="mb-1 font-bold">Adjust before continuing</div>
+                    <ul className="space-y-1 text-xs text-amber-100/80">
+                      {fileWarnings.map((w) => <li key={w}>· {w}</li>)}
+                    </ul>
                   </div>
                 )}
-              </div>
-              {error && <div className="mt-4 whitespace-pre-line rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm leading-6 text-red-100">{error}</div>}
-              <button
-                disabled={!canSubmit}
-                className={`mt-6 w-full rounded-2xl px-5 py-4 text-sm font-black uppercase tracking-[0.18em] transition ${canSubmit ? "bg-white text-black hover:scale-[1.01]" : "cursor-not-allowed bg-white/25 text-white/40"}`}
-              >
-                {isSubmitting ? "Starting..." : "Generate StudyPack"}
-              </button>
-              <p className="mt-3 text-center text-xs leading-5 text-white/35">Free preview includes opening pages plus a locked upgrade page.</p>
-            </form>
+
+                {error && (
+                  <div className="rounded-xl border border-red-400/20 bg-red-500/8 p-4 text-sm leading-6 text-red-100">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  disabled={!canSubmit}
+                  className={`w-full rounded-xl py-4 text-sm font-black uppercase tracking-[0.18em] transition-all ${
+                    canSubmit
+                      ? "bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.12)] hover:scale-[1.015] hover:shadow-[0_0_40px_rgba(255,255,255,0.18)]"
+                      : "cursor-not-allowed bg-white/15 text-white/30"
+                  }`}
+                >
+                  {isSubmitting ? "Starting..." : "Generate StudyPack →"}
+                </button>
+
+                <p className="text-center text-[11px] text-white/25">
+                  Free preview · Premium full pack · studypack.ai
+                </p>
+              </form>
+            </div>
           </div>
         )}
 
         {/* ── GENERATING ── */}
         {isGenerating && (
-          <div className="flex flex-1 items-center justify-center py-6">
-            <div className="w-full max-w-5xl">
+          <div className="flex flex-1 flex-col items-center justify-center py-8">
+            <div className="w-full max-w-4xl">
 
-              {/* Header */}
-              <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              {/* Top: status + pills */}
+              <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-cyan-100">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-300" />
+                  <div className="mb-3 inline-flex items-center gap-2.5 rounded-full border border-indigo-400/25 bg-indigo-500/12 px-4 py-2 text-[11px] font-black uppercase tracking-[0.20em] text-indigo-200">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-60" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-400" />
+                    </span>
                     StudyPack Engine Active
                   </div>
-                  <h2 className="text-4xl font-black tracking-tight md:text-5xl">{activePlan.label}</h2>
-                  <p className="mt-3 max-w-xl text-base leading-7 text-white/55">{activePlan.detail}</p>
+                  <h2 className="text-4xl font-black tracking-tight text-white md:text-5xl">
+                    {stagePlan.find(s => s.key === activeStage)?.label ?? "Processing"}
+                  </h2>
+                  <p className="mt-3 max-w-md text-base leading-7 text-white/45">
+                    {stagePlan.find(s => s.key === activeStage)?.detail ?? ""}
+                  </p>
                 </div>
+
+                {/* Two pills only */}
                 <div className="flex shrink-0 gap-3">
-                  <MetricPill label="Complete" value={`${Math.round(displayProgress)}%`} />
-                  <MetricPill label="Elapsed" value={formatElapsed(elapsed)} />
-                  <MetricPill
-                    label="Est. left"
-                    value={isComplete ? "Done" : elapsed < ESTIMATED_TOTAL_SECONDS ? formatElapsed(remainingSeconds) : "Finalising"}
-                  />
+                  <StatPill label="Complete" value={`${Math.round(displayProgress)}%`} />
+                  <StatPill label="Elapsed" value={formatElapsed(elapsed)} />
                 </div>
               </div>
 
               {/* Progress bar */}
-              <div className="relative mb-6 h-3 overflow-hidden rounded-full bg-white/10">
+              <div className="relative mb-8 h-[5px] overflow-hidden rounded-full bg-white/8">
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-400 via-indigo-400 to-fuchsia-400 transition-all duration-500"
-                  style={{ width: `${displayProgress}%` }}
+                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${displayProgress}%`,
+                    background: "linear-gradient(90deg, #818cf8, #38bdf8, #a78bfa)",
+                  }}
                 >
-                  <div className="absolute inset-0 animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+                  <div className="absolute inset-0 animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
                 </div>
               </div>
 
-              {/* Stage list — only 4 real stages */}
-              <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {stagePlan.filter(s => s.key !== "complete").map((step) => {
-                  const done = activeStage === "complete" ||
-                    stagePlan.findIndex(s => s.key === activeStage) > stagePlan.findIndex(s => s.key === step.key);
+              {/* Stage pills — 4 honest stages */}
+              <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+                {stagePlan.map((step, i) => {
+                  const done = activeStage === "complete" || activeStageIndex > i;
                   const current = activeStage === step.key;
                   return (
                     <div
                       key={step.key}
-                      className={`rounded-2xl border px-4 py-3 transition-all ${
+                      className={`rounded-2xl border px-4 py-3.5 transition-all duration-500 ${
                         done
-                          ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100"
+                          ? "border-emerald-400/20 bg-emerald-400/8"
                           : current
-                          ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-50"
-                          : "border-white/10 bg-white/[0.04] text-white/30"
+                          ? "border-indigo-400/30 bg-indigo-400/10 shadow-[0_0_20px_rgba(99,102,241,0.10)]"
+                          : "border-white/8 bg-white/[0.03]"
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 text-sm font-bold">
+                      <div className="flex items-center gap-2.5">
                         {done ? (
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-300 text-[10px] font-black text-black">✓</span>
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-400 text-[9px] font-black text-black">✓</span>
                         ) : current ? (
-                          <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-cyan-300" />
+                          <span className="relative flex h-2.5 w-2.5 shrink-0">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-50" />
+                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-indigo-400" />
+                          </span>
                         ) : (
-                          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-white/20" />
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-white/15" />
                         )}
-                        <span className="truncate">{step.label}</span>
+                        <span className={`text-sm font-bold leading-tight ${done ? "text-emerald-200" : current ? "text-indigo-100" : "text-white/25"}`}>
+                          {step.label}
+                        </span>
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Main content area */}
-              <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-
-                {/* AI Writing panel — the big one */}
-                <div className={`rounded-3xl border p-6 transition-all duration-700 ${
-                  isInAIPhase
-                    ? "border-indigo-400/25 bg-gradient-to-br from-indigo-500/10 to-cyan-500/8 shadow-[0_0_60px_rgba(99,102,241,0.08)]"
-                    : "border-white/10 bg-black/20"
-                }`}>
-                  {isInAIPhase ? (
-                    <>
-                      <div className="mb-4 flex items-center gap-3">
+              {/* AI Writing panel */}
+              <div className={`rounded-3xl border p-8 transition-all duration-700 ${
+                isInAIPhase
+                  ? "border-indigo-400/20 bg-gradient-to-br from-indigo-500/8 via-violet-500/5 to-cyan-500/5"
+                  : "border-white/8 bg-white/[0.03]"
+              }`}>
+                {isInAIPhase ? (
+                  <div className="grid gap-10 md:grid-cols-[1fr_auto]">
+                    {/* Left: live writing feed */}
+                    <div>
+                      <div className="mb-2 flex items-center gap-2.5">
                         <div className="flex gap-1">
-                          <span className="h-2 w-2 animate-bounce rounded-full bg-indigo-300 [animation-delay:-0.3s]" />
-                          <span className="h-2 w-2 animate-bounce rounded-full bg-indigo-300 [animation-delay:-0.15s]" />
-                          <span className="h-2 w-2 animate-bounce rounded-full bg-indigo-300" />
+                          {[0,1,2].map(i => (
+                            <span
+                              key={i}
+                              className="h-1.5 w-1.5 rounded-full bg-indigo-400"
+                              style={{ animation: `bounce 1.2s ease-in-out ${i * 0.15}s infinite` }}
+                            />
+                          ))}
                         </div>
-                        <div className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200/60">GPT-5.4 Writing</div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-300/60">
+                          GPT-5.4 · Live
+                        </span>
                       </div>
-                      <div className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-indigo-200/50">Live Progress</div>
-                      <p className="text-xl font-bold leading-8 text-indigo-50">{liveInsight}</p>
-                      <div className="mt-6 space-y-2">
-                        {[
-                          { label: "7 assessment hotspots", done: elapsed > 40 },
-                          { label: "6 tutor note deep-dives", done: elapsed > 70 },
-                          { label: "Critical debates + quiz", done: elapsed > 100 },
-                          { label: "2 full model answers", done: elapsed > 130 },
-                          { label: "Attack sheet + glossary", done: elapsed > 155 },
-                        ].map(({ label, done }) => (
-                          <div key={label} className={`flex items-center gap-2.5 text-sm transition-all duration-700 ${done ? "text-emerald-200" : "text-white/25"}`}>
-                            <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-black transition-all duration-700 ${done ? "bg-emerald-300 text-black" : "border border-white/15 bg-transparent text-transparent"}`}>
-                              {done ? "✓" : ""}
-                            </span>
-                            {label}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                        <p className="text-xs leading-5 text-white/38">
-                          GPT-5.4 writes every section from your uploaded material in a single pass. This takes 2–3 minutes and produces a 30–38 page premium study book.
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="mb-4 text-xs font-black uppercase tracking-[0.2em] text-white/40">Engine Status</div>
-                      <div className="flex items-center gap-3 text-sm font-bold text-cyan-50">
-                        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-300" />
-                        {status?.message || activePlan.detail}
-                      </div>
-                      <div className="mt-4 space-y-2">
-                        {(status?.completed_steps || []).map((step) => (
-                          <div key={step} className="flex items-center gap-2 text-sm text-emerald-100">
-                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-300 text-[10px] font-black text-black">✓</span>
-                            {step}
-                          </div>
-                        ))}
-                      </div>
-                      <p className="mt-5 text-xs leading-5 text-white/35">
-                        Extracting text and mapping assessment themes from your lecture material. GPT-5.4 writing begins shortly.
+
+                      <p className="mb-6 text-xl font-semibold leading-8 text-white/80">
+                        {liveInsight}
                       </p>
-                    </>
-                  )}
-                </div>
 
-                {/* Right panel — metrics + info */}
-                <div className="space-y-4">
-                  {/* Metrics — only show when complete */}
-                  <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
-                    <div className="mb-4 text-xs font-black uppercase tracking-[0.2em] text-white/40">Generated Sections</div>
-                    {detected ? (
-                      <div className="grid grid-cols-2 gap-3">
-                        {metrics.map((x) => <MetricCard key={x.label} label={x.label} value={x.value} />)}
+                      {/* Checklist */}
+                      <div className="space-y-2.5">
+                        {aiChecklist.map(({ label, elapsed: threshold }) => {
+                          const done = elapsed > threshold;
+                          return (
+                            <div
+                              key={label}
+                              className={`flex items-center gap-3 text-sm transition-all duration-700 ${done ? "text-white/85" : "text-white/22"}`}
+                            >
+                              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-black transition-all duration-700 ${
+                                done ? "bg-emerald-400 text-black" : "border border-white/12 bg-transparent"
+                              }`}>
+                                {done ? "✓" : ""}
+                              </span>
+                              <span className={done ? "font-medium" : ""}>{label}</span>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {["7 assessment hotspots", "6 tutor note deep-dives", "2 full model answers", "12-point attack sheet"].map((x) => (
-                          <div key={x} className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-sm text-white/30">{x}</div>
-                        ))}
-                        <p className="pt-1 text-xs text-white/20">Confirmed counts appear when generation completes.</p>
-                      </div>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* What's being built */}
-                  <div className="rounded-3xl border border-fuchsia-300/10 bg-gradient-to-br from-fuchsia-500/8 to-cyan-500/8 p-5">
-                    <div className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-white/40">What You're Getting</div>
-                    <div className="space-y-1.5 text-sm text-white/60">
-                      {[
-                        "30–38 page premium PDF",
-                        "Tutor notes anchored to your material",
-                        "Assessment hotspots + HD insights",
-                        "Full model answers",
-                        "Attack sheet + final cram sheet",
-                        "Locked preview for free download",
-                      ].map((x) => (
-                        <div key={x} className="flex items-center gap-2">
-                          <span className="text-fuchsia-300">·</span>
-                          {x}
+                    {/* Right: what you're getting */}
+                    <div className="hidden w-64 shrink-0 md:block">
+                      <div className="rounded-2xl border border-white/8 bg-black/20 p-5">
+                        <div className="mb-4 text-[10px] font-black uppercase tracking-[0.18em] text-white/30">
+                          Your StudyPack includes
                         </div>
-                      ))}
+                        <ul className="space-y-2.5">
+                          {[
+                            "30–38 page premium PDF",
+                            "7 assessment hotspots",
+                            "6 deep tutor notes",
+                            "2 full model answers",
+                            "One-page attack sheet",
+                            "Quiz + revision blocks",
+                            "Final cram sheet",
+                            "Full glossary",
+                          ].map((x) => (
+                            <li key={x} className="flex items-start gap-2 text-xs text-white/45">
+                              <span className="mt-0.5 text-indigo-400/70">·</span>
+                              {x}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  /* Pre-AI phase */
+                  <div className="flex items-center gap-4">
+                    <span className="relative flex h-3 w-3 shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-50" />
+                      <span className="relative inline-flex h-3 w-3 rounded-full bg-cyan-400" />
+                    </span>
+                    <div>
+                      <p className="font-semibold text-white/80">
+                        {status?.message || "Preparing your material for analysis..."}
+                      </p>
+                      <p className="mt-1 text-sm text-white/35">
+                        GPT-5.4 writing begins shortly. This stage takes around 10 seconds.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* ── COMPLETE / FAILED ── */}
-        {(isComplete || isFailed) && (
+        {/* ── COMPLETE ── */}
+        {isComplete && (
           <div className="flex flex-1 items-center justify-center">
-            <div className="w-full max-w-3xl rounded-[2.4rem] border border-white/10 bg-white/[0.07] p-8 text-center shadow-2xl backdrop-blur-xl md:p-12">
-              {isComplete ? (
-                <>
-                  <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-300 text-5xl font-black text-black shadow-[0_0_50px_rgba(52,211,153,.45)]">✓</div>
-                  <h2 className="text-5xl font-black">StudyPack Ready</h2>
-                  <p className="mx-auto mt-4 max-w-xl text-white/60">
-                    Completed in <span className="font-bold text-white">{formatElapsed(elapsed)}</span>
-                    {detected && (
-                      <span className="block mt-1 text-sm">
-                        {detected.assessment_hotspots && `${detected.assessment_hotspots} hotspots · `}
-                        {detected.expanded_notes && `${detected.expanded_notes} tutor notes · `}
-                        {detected.practice_questions && `${detected.practice_questions} model answers`}
-                      </span>
-                    )}
-                  </p>
-                  <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                    <a
-                      href={absoluteUrl(status?.preview_downl
+            <div className="w-full max-w-2xl text-center">
+
+              {/* Success mark */}
+              <div className="relative mx-auto mb-8 h-28 w-28">
+                <div className="absolute inset-0 animate-ping rounded-full bg-emerald-400/20" style={{ animationDuration: "2s" }} />
+                <div className="relative flex h-28 w-28 items-center justify-center rounded-full bg-emerald-400 text-5xl font-black text-black shadow-[0_0_60px_rgba(52,211,153,0.40)]">
+                  ✓
+                </div>
+              </div>
+
+              <h2 className="text-5xl font-black tracking-tight text-white md:text-6xl">
+                StudyPack Ready
+              </h2>
+              <p className="mx-auto mt-4 max-w-sm text-white/45">
+                Generated in <span className="font-bold text-white">{formatElapsed(elapsed)}</span>
+              </p>
+
+              {/* Section summary */}
+              {detected && (
+                <div className="mx-auto mt-6 grid max-w-sm grid-cols-2 gap-3">
+                  {[
+                    { label: "Assessment hotspots", val: detected.assessment_hotspots },
+                    { label: "Tutor notes", val: detected.expanded_notes },
+                    { label: "Quiz checks", val: detected.quiz_checks },
+                    { label: "Model answers", val: detected.practice_questions },
+                  ].filter(x => x.val).map(({ label, val }) => (
+                    <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.05] p-4">
+                      <div className="text-2xl font-black text-white">{val}</div>
+                      <div className="mt-0.5 text-xs text-white/40">{label}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Downloads */}
+              <div className="mx-auto mt-8 grid max-w-sm gap-3">
+                <a
+                  href={absoluteUrl(status?.premium_download_url)}
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-sm font-black text-black shadow-[0_0_40px_rgba(255,255,255,0.15)] transition hover:scale-[1.02]"
+                >
+                  ↓ Download Premium StudyPack
+                </a>
+                <a
+                  href={absoluteUrl(status?.preview_download_url)}
+                  className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-6 py-4 text-sm font-bold text-white/70 transition hover:bg-white/10"
+                >
+                  ↓ Download Free Preview
+                </a>
+                <button
+                  onClick={resetToStart}
+                  className="rounded-2xl border border-indigo-400/20 bg-indigo-400/8 px-6 py-4 text-sm font-bold text-indigo-200 transition hover:bg-indigo-400/12"
+                >
+                  Create Another Pack
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── FAILED ── */}
+        {isFailed && (
+          <div className="flex flex-1 items-center justify-center">
+            <div className="w-full max-w-xl rounded-[2rem] border border-white/10 bg-white/[0.05] p-10 text-center backdrop-blur-xl">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-500 text-3xl font-black text-white">!</div>
+              <h2 className="text-4xl font-black">Generation Failed</h2>
+              <p className="mx-auto mt-4 max-w-sm whitespace-pre-line text-sm leading-7 text-white/55">
+                {error || status?.message || "Please check your upload and try again."}
+              </p>
+              <button
+                onClick={resetToStart}
+                className="mt-8 w-full rounded-2xl bg-white px-6 py-4 text-sm font-black text-black transition hover:scale-[1.01]"
+              >
+                Back to Upload
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      <style jsx global>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-150%); }
+          100% { transform: translateX(150%); }
+        }
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+      `}</style>
+    </main>
+  );
+}
+
+function StatPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3.5 text-center backdrop-blur">
+      <div className="text-2xl font-black tracking-tight text-white">{value}</div>
+      <div className="mt-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/30">{label}</div>
+    </div>
+  );
+}
+
+function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
