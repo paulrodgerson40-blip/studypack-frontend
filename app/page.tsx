@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useUser, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import Link from "next/link";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_STUDYPACK_API_BASE ||
@@ -383,6 +384,9 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Link href="/pricing" className="text-sm font-bold text-white/50 transition hover:text-white/80">
+              Pricing
+            </Link>
             {isSignedIn ? (
               <UserButton />
             ) : (
