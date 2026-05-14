@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useUser, SignInButton } from "@clerk/nextjs";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_STUDYPACK_API_BASE ||
@@ -193,6 +194,7 @@ function targetProgress(stage: StageKey, elapsed: number, backendPct: number): n
 }
 
 export default function Home() {
+  const { isSignedIn } = useUser();
   const [subject, setSubject] = useState("");
   const [week, setWeek] = useState("");
   const [topic, setTopic] = useState("");
