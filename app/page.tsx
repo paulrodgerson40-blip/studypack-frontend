@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useUser, SignInButton } from "@clerk/nextjs";
 import Header from "@/components/Header";
 
 const API_BASE =
@@ -818,6 +818,48 @@ export default function Home() {
         }
       `}</style>
     </main>
+  );
+}
+
+function PremiumDownloadButton({ url }: { url: string }) {
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+
+  async function handleDownload() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/user/deduct-credit", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 402) {
+          setError("No credits remaining. Buy more credits to download.");
+        } else {
+          setError(data.error || "Something went wrong.");
+        }
+        return;
+      }
+      window.location.href = url;
+    } catch {
+      setError("Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <button
+        onClick={handleDownload}
+        disabled={loading}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-sm font-black text-black shadow-[0_0_40px_rgba(255,255,255,0.15)] transition hover:scale-[1.02] disabled:opacity-60"
+      >
+        {loading ? "Processing..." : "↓ Download Premium StudyPack (1 credit)"}
+      </button>
+      {error && (
+        <p className="mt-2 text-center text-sm text-red-400">{error}</p>
+      )}
+    </div>
   );
 }
 
