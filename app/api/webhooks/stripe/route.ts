@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   }
 
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.CheckoutSession;
+    const session = event.data.object as Stripe.Checkout.Session;
     const { supabase_user_id, credits, pack_name } = session.metadata!;
     const creditsNum = parseInt(credits);
 
