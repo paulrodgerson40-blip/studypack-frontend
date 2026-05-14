@@ -230,8 +230,7 @@ export default function Home() {
     return w;
   }, [files, selectedTotalBytes]);
 
-  const canSubmit =
-    !!subject.trim() && !!week.trim() && files.length > 0 && !fileWarnings.length && !isSubmitting;
+  const canSubmit = files.length > 0 && !fileWarnings.length && !isSubmitting;
   const isGenerating =
     status?.status === "queued" || status?.status === "processing" || isSubmitting;
   const isComplete = status?.status === "complete";
@@ -295,9 +294,12 @@ export default function Home() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!subject.trim() || !week.trim()) return setError("Please enter your subject and week.");
     if (!files.length) return setError("Please upload your weekly lecture transcript.");
     if (fileWarnings.length) return setError(fileWarnings.join("\n"));
+
+    // Auto-detect subject/week from first filename if user left them blank
+    const resolvedSubject = subject.trim() || files[0].name.replace(/\.[^.]+$/, "").slice(0, 40) || "Subject";
+    const resolvedWeek    = week.trim() || "Auto-detect";
 
     try {
       const localStart = Date.now();
@@ -309,8 +311,8 @@ export default function Home() {
       setStatus({ status: "queued", progress: 2 });
 
       const fd = new FormData();
-      fd.append("subject", subject);
-      fd.append("week", week);
+      fd.append("subject", resolvedSubject);
+      fd.append("week", resolvedWeek);
       fd.append("topic", topic);
       files.forEach((f) => fd.append("files", f));
 
@@ -446,20 +448,20 @@ export default function Home() {
               </div>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                <FormField label="Subject">
+                <FormField label="Subject (optional)">
                   <input
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    placeholder="e.g. CRIM335 or LAW399"
+                    placeholder="e.g. CRIM335 — auto-detected if blank"
                     className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/22 focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition"
                   />
                 </FormField>
 
-                <FormField label="Week">
+                <FormField label="Week (optional)">
                   <input
                     value={week}
                     onChange={(e) => setWeek(e.target.value)}
-                    placeholder="e.g. Week 3"
+                    placeholder="e.g. Week 3 — auto-detected if blank"
                     className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/22 focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition"
                   />
                 </FormField>
