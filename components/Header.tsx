@@ -40,6 +40,9 @@ export default function Header() {
         <Link href="/pricing" className="text-sm font-bold text-white/50 transition hover:text-white/80">
           Pricing
         </Link>
+        <Link href="/contact" className="text-sm font-bold text-white/50 transition hover:text-white/80">
+          Contact
+        </Link>
         {isSignedIn ? (
           <>
             <Link href="/dashboard" className="text-sm font-bold text-white/50 transition hover:text-white/80">
