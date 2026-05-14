@@ -2,17 +2,26 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import Link from "next/link";
 
 export default function DashboardPage() {
   const { isSignedIn, isLoaded, user } = useUser();
   const router = useRouter();
+  const [credits, setCredits] = useState<number | null>(null);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.push("/");
   }, [isLoaded, isSignedIn, router]);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+    fetch("/api/user/credits")
+      .then((r) => r.json())
+      .then((d) => setCredits(d.credits ?? 0))
+      .catch(() => setCredits(0));
+  }, [isSignedIn]);
 
   if (!isLoaded || !isSignedIn) return null;
 
@@ -33,7 +42,9 @@ export default function DashboardPage() {
         <div className="mb-8 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-6">
             <div className="text-xs font-bold uppercase tracking-widest text-indigo-300/60">Credits remaining</div>
-            <div className="mt-2 text-5xl font-black text-white">0</div>
+            <div className="mt-2 text-5xl font-black text-white">
+              {credits === null ? "..." : credits}
+            </div>
             <div className="mt-1 text-sm text-white/40">1 credit = 1 full StudyPack</div>
             <Link href="/pricing" className="mt-4 inline-block rounded-xl bg-indigo-500 px-4 py-2 text-sm font-black text-white transition hover:bg-indigo-400">
               Buy credits
