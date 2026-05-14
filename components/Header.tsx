@@ -2,9 +2,19 @@
 
 import Link from "next/link";
 import { useUser, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { useEffect, useState } from "react";
 
 export default function Header() {
   const { isSignedIn } = useUser();
+  const [credits, setCredits] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+    fetch("/api/user/credits")
+      .then((r) => r.json())
+      .then((d) => setCredits(d.credits ?? 0))
+      .catch(() => setCredits(0));
+  }, [isSignedIn]);
 
   return (
     <header className="mb-12 flex items-center justify-between">
@@ -34,6 +44,10 @@ export default function Header() {
           <>
             <Link href="/dashboard" className="text-sm font-bold text-white/50 transition hover:text-white/80">
               Dashboard
+            </Link>
+            <Link href="/pricing" className="flex items-center gap-1.5 rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-3 py-1.5 text-sm font-black text-indigo-300 transition hover:bg-indigo-500/20">
+              <span>⚡</span>
+              <span>{credits === null ? "..." : credits} credits</span>
             </Link>
             <UserButton />
           </>
