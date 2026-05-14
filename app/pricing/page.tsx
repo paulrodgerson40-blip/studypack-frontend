@@ -3,6 +3,7 @@
 import { SignUpButton, SignInButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import Header from "@/components/Header";
+import { useState } from "react";
 
 const packs = [
   {
@@ -12,6 +13,7 @@ const packs = [
     per: 2.00,
     popular: false,
     description: "Try it out",
+    priceId: "price_1TWxcaH2DbjxeKGJVKxel8bv",
   },
   {
     name: "Plus",
@@ -20,6 +22,7 @@ const packs = [
     per: 1.90,
     popular: true,
     description: "Most popular",
+    priceId: "price_1TWxcbH2DbjxeKGJTF8qU19q",
   },
   {
     name: "Value",
@@ -28,6 +31,7 @@ const packs = [
     per: 1.80,
     popular: false,
     description: "Best value",
+    priceId: "price_1TWxccH2DbjxeKGJlgPo3ttd",
   },
   {
     name: "Pro",
@@ -36,11 +40,30 @@ const packs = [
     per: 1.70,
     popular: false,
     description: "Power user",
+    priceId: "price_1TWxccH2DbjxeKGJNscVOZc2",
   },
 ];
 
 export default function PricingPage() {
   const { isSignedIn } = useUser();
+  const [loading, setLoading] = useState<string | null>(null);
+
+  async function handleBuy(priceId: string, packName: string, credits: number) {
+    setLoading(priceId);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId, packName, credits }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(null);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#050818] text-white">
@@ -114,15 +137,19 @@ export default function PricingPage() {
               </ul>
               <div className="mt-6">
                 {isSignedIn ? (
-                  <button className="w-full rounded-xl bg-white py-3 text-sm font-black text-black transition hover:scale-[1.02]">
-                    Buy {pack.name}
+                  <button
+                    onClick={() => handleBuy(pack.priceId, pack.name, pack.credits)}
+                    disabled={loading === pack.priceId}
+                    className="w-full rounded-xl bg-white py-3 text-sm font-black text-black transition hover:scale-[1.02] disabled:opacity-60"
+                  >
+                    {loading === pack.priceId ? "Loading..." : `Buy ${pack.name}`}
                   </button>
                 ) : (
-                  <SignUpButton mode="modal">
+                  <SignInButton mode="modal">
                     <button className="w-full rounded-xl bg-white py-3 text-sm font-black text-black transition hover:scale-[1.02]">
-                      Get started
+                      Sign in to buy
                     </button>
-                  </SignUpButton>
+                  </SignInButton>
                 )}
               </div>
             </div>
