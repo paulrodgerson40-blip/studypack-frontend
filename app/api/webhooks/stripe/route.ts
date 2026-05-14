@@ -13,26 +13,43 @@ export async function POST(req: Request) {
   try {
     event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err) {
+    console.error("Webhook signature error:", err);
     return new NextResponse("Invalid signature", { status: 400 });
   }
 
+  console.log("Webhook event type:", event.type);
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    const { supabase_user_id, credits, pack_name } = session.metadata!;
+    console.log("Session metadata:", session.metadata);
+    console.log("Session ID:", session.id);
+
+    const metadata = session.metadata || {};
+    const supabase_user_id = metadata.supabase_user_id;
+    const credits = metadata.credits;
+
+    if (!supabase_user_id || !credits) {
+      console.error("Missing metadata:", metadata);
+      return new NextResponse("Missing metadata", { status: 400 });
+    }
+
     const creditsNum = parseInt(credits);
 
-    // Add credits to user
-    const { data: profile } = await supabaseAdmin
+    const { data: profile, error } = await supabaseAdmin
       .from("user_profiles")
       .select("credits")
       .eq("id", supabase_user_id)
       .single();
 
+    console.log("Profile found:", profile, "Error:", error);
+
     if (profile) {
-      await supabaseAdmin
+      const { error: updateError } = await supabaseAdmin
         .from("user_profiles")
-        .update({ credits: profile.credits + creditsNum })
+        .update({ credits: (profile.credits || 0) + creditsNum })
         .eq("id", supabase_user_id);
+
+      console.log("Update error:", updateError);
 
       await supabaseAdmin
         .from("credit_transactions")
