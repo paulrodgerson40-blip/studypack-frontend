@@ -205,6 +205,7 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [insightIndex, setInsightIndex] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const startedAtRef = useRef<number | null>(null);
@@ -473,10 +474,31 @@ export default function Home() {
                 </FormField>
 
                 <FormField label="Upload lecture files">
-                  <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-white/15 bg-black/20 px-5 py-6 text-center transition hover:border-indigo-400/35 hover:bg-black/30">
-                    <span className="text-2xl">↑</span>
+                  <div
+                    onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDragging(false);
+                      const dropped = Array.from(e.dataTransfer.files);
+                      if (dropped.length) { setFiles(dropped); setError(""); }
+                    }}
+                    className={`relative flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed px-5 py-6 text-center transition-all ${
+                      isDragging
+                        ? "border-indigo-400/70 bg-indigo-500/12 shadow-[0_0_30px_rgba(99,102,241,0.12)]"
+                        : "border-white/15 bg-black/20 hover:border-indigo-400/35 hover:bg-black/30"
+                    }`}
+                  >
+                    <span className={`text-2xl transition-transform ${isDragging ? "scale-125" : ""}`}>
+                      {isDragging ? "↓" : "↑"}
+                    </span>
                     <span className="text-sm text-white/50">
-                      Drop files or <span className="font-bold text-indigo-300">browse</span>
+                      {isDragging
+                        ? <span className="font-bold text-indigo-300">Drop to add files</span>
+                        : <>Drop files or <span className="font-bold text-indigo-300">browse</span></>
+                      }
                     </span>
                     <span className="text-xs text-white/28">PDF · DOCX · PPTX · TXT · up to {MAX_FILES} files · {MAX_FILE_MB}MB each</span>
                     <input
@@ -484,9 +506,9 @@ export default function Home() {
                       multiple
                       accept=".pdf,.txt,.pptx,.docx"
                       onChange={(e) => { setFiles(Array.from(e.target.files || [])); setError(""); }}
-                      className="hidden"
+                      className="absolute inset-0 cursor-pointer opacity-0"
                     />
-                  </label>
+                  </div>
                   {!!files.length && (
                     <div className="mt-3 space-y-1.5">
                       {files.map((f) => (
