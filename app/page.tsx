@@ -6,8 +6,6 @@ const API_BASE =
   process.env.NEXT_PUBLIC_STUDYPACK_API_BASE ||
   "https://studypack-api.170.64.209.149.sslip.io";
 
-const API_VERSION = "StudyPack.ai Engine V32";
-
 const MAX_FILES = 4;
 const MAX_FILE_MB = 5;
 const MAX_TOTAL_MB = 20;
@@ -70,7 +68,7 @@ const stagePlan: Array<{
   {
     key: "generating",
     label: "Writing StudyPack",
-    detail: "GPT-5.4 is writing your complete study system from the uploaded material.",
+    detail: "Our engine is writing your complete study system from the uploaded material.",
     estimatedStart: 22,
     estimatedEnd: 178,
   },
@@ -381,9 +379,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <div className="hidden rounded-full border border-white/8 bg-white/[0.05] px-4 py-2 text-[11px] font-semibold text-white/40 backdrop-blur md:block">
-            {API_VERSION}
-          </div>
+        
         </header>
 
         {/* ── UPLOAD ── */}
@@ -394,7 +390,7 @@ export default function Home() {
             <div>
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-400/25 bg-indigo-500/10 px-4 py-2 text-xs font-bold text-indigo-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
-                GPT-5.4 · 30–38 page premium study book · 2–3 minutes
+                AI-powered · 30–38 page premium study book · 2–3 minutes
               </div>
 
               <h1 className="text-5xl font-black leading-[0.94] tracking-tight text-white md:text-[72px]">
@@ -552,6 +548,11 @@ export default function Home() {
                 <p className="text-center text-[11px] text-white/25">
                   Free preview · Premium full pack · studypack.ai
                 </p>
+                <div className="rounded-xl border border-indigo-400/15 bg-indigo-400/8 px-4 py-3 text-center">
+                  <p className="text-xs leading-5 text-indigo-200/70">
+                    ✦ Most StudyPacks are ready in <span className="font-bold text-indigo-200">2–4 minutes</span> — a complete elite study system built from your lecture, not a generic summary.
+                  </p>
+                </div>
               </form>
             </div>
           </div>
@@ -657,7 +658,7 @@ export default function Home() {
                           ))}
                         </div>
                         <span className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-300/60">
-                          GPT-5.4 · Live
+                          StudyPack Engine · Live
                         </span>
                       </div>
 
@@ -724,7 +725,7 @@ export default function Home() {
                         {status?.message || "Preparing your material for analysis..."}
                       </p>
                       <p className="mt-1 text-sm text-white/35">
-                        GPT-5.4 writing begins shortly. This stage takes around 10 seconds.
+                        Finalising your premium PDF. Almost there.
                       </p>
                     </div>
                   </div>
@@ -752,6 +753,9 @@ export default function Home() {
               </h2>
               <p className="mx-auto mt-4 max-w-sm text-white/45">
                 Generated in <span className="font-bold text-white">{formatElapsed(elapsed)}</span>
+              </p>
+              <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-indigo-300/80">
+                Your elite study system is ready — tutor-grade notes, assessment hotspots, model answers and a complete revision system, all built from your lecture material.
               </p>
 
               {/* Section summary */}
