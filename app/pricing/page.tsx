@@ -86,11 +86,7 @@ export default function PricingPage() {
                   : "border-white/10 bg-white/[0.03]"
               }`}
             >
-              {pack.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-indigo-500 px-4 py-1 text-[10px] font-black uppercase tracking-widest text-white">
-                  Most popular
-                </div>
-              )}
+
               <div className="text-xs font-bold uppercase tracking-widest text-white/40">
                 {pack.description}
               </div>
