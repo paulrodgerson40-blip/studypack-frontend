@@ -24,6 +24,9 @@ export default function Header() {
         </div>
       </Link>
       <div className="flex items-center gap-3">
+        <Link href="/" className="text-sm font-bold text-white/50 transition hover:text-white/80">
+          Home
+        </Link>
         <Link href="/pricing" className="text-sm font-bold text-white/50 transition hover:text-white/80">
           Pricing
         </Link>
