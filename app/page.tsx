@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useUser, SignInButton } from "@clerk/nextjs";
+import { useUser, SignInButton, UserButton } from "@clerk/nextjs";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_STUDYPACK_API_BASE ||
