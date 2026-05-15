@@ -376,7 +376,7 @@ export default function Home() {
             <div>
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-400/25 bg-indigo-500/10 px-4 py-2 text-xs font-bold text-indigo-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
-                AI-powered · 30–38 page premium study book · 2–3 minutes
+                Elite study system · AI-built from your lecture material
               </div>
 
               <h1 className="text-5xl font-black leading-[0.94] tracking-tight text-white md:text-[72px]">
