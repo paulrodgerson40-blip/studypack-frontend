@@ -940,6 +940,145 @@ function HomeInner() {
         )}
 
 
+        {/* ── HOW IT WORKS ── */}
+        {!isSubmitting && !status && (
+          <div className="mx-auto mt-28 w-full max-w-4xl px-5">
+            <div className="mb-12 text-center">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-400/25 bg-indigo-500/10 px-4 py-2 text-xs font-bold text-indigo-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                Simple three-step process
+              </div>
+              <h2 className="text-3xl font-black text-white md:text-4xl">How it works</h2>
+              <p className="mt-3 text-sm text-white/40">From lecture notes to exam-ready in under 4 minutes.</p>
+            </div>
+            <div className="grid gap-6 md:grid-cols-3">
+              {[
+                { step: "01", icon: "↑", title: "Upload your material", body: "Drop in your weekly lecture transcript and slides — PDF, DOCX, PPTX or TXT. Up to 4 files, any university, any subject." },
+                { step: "02", icon: "⚡", title: "AI builds your pack", body: "Our system reads your actual content and writes a tutor-quality 30–38 page StudyPack in 2–4 minutes. No generic summaries." },
+                { step: "03", icon: "✓", title: "Study smarter", body: "Download your premium PDF. Hotspots, model answers, attack sheet — everything you need to ace your assessments." },
+              ].map((s) => (
+                <div key={s.step} className="relative rounded-2xl border border-white/8 bg-white/[0.03] p-7">
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="text-4xl font-black text-white/8">{s.step}</span>
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 text-lg text-indigo-300">{s.icon}</span>
+                  </div>
+                  <h3 className="mb-2 text-base font-black text-white">{s.title}</h3>
+                  <p className="text-sm leading-relaxed text-white/45">{s.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── WHAT'S IN A PACK ── */}
+        {!isSubmitting && !status && (
+          <div className="mx-auto mt-28 w-full max-w-4xl px-5">
+            <div className="mb-12 text-center">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                30–38 pages of premium content
+              </div>
+              <h2 className="text-3xl font-black text-white md:text-4xl">What's inside every pack</h2>
+              <p className="mt-3 text-sm text-white/40">Six sections. Everything a private tutor would give you.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+              {[
+                { emoji: "🎯", title: "Lecture Hotspots", body: "The 8–12 most examinable concepts from your lecture, ranked by assessment probability." },
+                { emoji: "📖", title: "Deep Study Notes", body: "Full tutor-written notes on every key topic. Not bullet points — proper explanations you can actually learn from." },
+                { emoji: "✍️", title: "Model Answers", body: "Exam-style questions with full model answers written to the mark scheme of your subject." },
+                { emoji: "⚔️", title: "Attack Sheet", body: "A one-page cram sheet with the highest-yield facts, definitions and formulas for last-minute revision." },
+                { emoji: "🔗", title: "Concept Links", body: "How this week's content connects to previous weeks and likely exam themes — the big picture." },
+                { emoji: "📊", title: "Week Summary", body: "A structured overview of every topic covered, with difficulty ratings and time-to-master estimates." },
+              ].map((item) => (
+                <div key={item.title} className="rounded-2xl border border-white/8 bg-white/[0.03] p-6 transition hover:border-emerald-400/20 hover:bg-emerald-500/5">
+                  <div className="mb-3 text-2xl">{item.emoji}</div>
+                  <h3 className="mb-2 text-sm font-black text-white">{item.title}</h3>
+                  <p className="text-xs leading-relaxed text-white/45">{item.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── PRICING ── */}
+        {!isSubmitting && !status && (
+          <div className="mx-auto mt-28 w-full max-w-4xl px-5">
+            <div className="mb-12 text-center">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-400/25 bg-indigo-500/10 px-4 py-2 text-xs font-bold text-indigo-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                Simple credit pricing
+              </div>
+              <h2 className="text-3xl font-black text-white md:text-4xl">Pay only for what you use</h2>
+              <p className="mt-3 text-sm text-white/40">No subscriptions. Credits never expire. 1 credit = 1 weekly pack.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { name: "Starter", credits: 5, price: 10, per: "2.00", popular: false },
+                { name: "Plus", credits: 10, price: 19, per: "1.90", popular: true },
+                { name: "Value", credits: 20, price: 36, per: "1.80", popular: false },
+                { name: "Pro", credits: 50, price: 85, per: "1.70", popular: false },
+              ].map((plan) => (
+                <div key={plan.name} className={[
+                  "relative rounded-2xl border p-6 transition",
+                  plan.popular
+                    ? "border-indigo-400/40 bg-indigo-500/15 shadow-[0_0_40px_rgba(99,102,241,0.15)]"
+                    : "border-white/8 bg-white/[0.03] hover:border-white/15",
+                ].join(" ")}>
+                  {plan.popular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-indigo-500 px-3 py-1 text-[10px] font-black text-white">
+                      MOST POPULAR
+                    </div>
+                  )}
+                  <div className="mb-1 text-sm font-black text-white">{plan.name}</div>
+                  <div className="mb-1 flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-white">${plan.price}</span>
+                  </div>
+                  <div className="mb-4 text-xs text-white/40">{plan.credits} credits · ${plan.per} each</div>
+                  <div className="mb-5 space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-white/60">
+                      <span className="text-emerald-400">✓</span>{plan.credits} weekly packs
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-white/60">
+                      <span className="text-emerald-400">✓</span>Credits never expire
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-white/60">
+                      <span className="text-emerald-400">✓</span>All languages included
+                    </div>
+                  </div>
+                  <a
+                    href="/pricing"
+                    className={[
+                      "block w-full rounded-xl py-2.5 text-center text-xs font-black transition",
+                      plan.popular
+                        ? "bg-indigo-500 text-white hover:bg-indigo-400"
+                        : "border border-white/15 text-white hover:bg-white/10",
+                    ].join(" ")}
+                  >
+                    Get {plan.name}
+                  </a>
+                </div>
+              ))}
+            </div>
+            <p className="mt-6 text-center text-xs text-white/30">Try free first — generate a 6-page preview with no account needed.</p>
+          </div>
+        )}
+
+        {/* ── SOCIAL PROOF ── */}
+        {!isSubmitting && !status && (
+          <div className="mx-auto mt-28 w-full max-w-4xl px-5">
+            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-10 text-center">
+              <p className="mb-8 text-sm font-bold uppercase tracking-widest text-white/30">Built for students at any university</p>
+              <div className="flex flex-wrap items-center justify-center gap-6 text-sm font-bold text-white/20">
+                {["University of Sydney", "UNSW", "Monash", "UQ", "ANU", "UNE", "Deakin", "La Trobe"].map(u => (
+                  <span key={u} className="rounded-xl border border-white/8 px-4 py-2 text-xs text-white/35">{u}</span>
+                ))}
+              </div>
+              <p className="mt-8 text-xs text-white/25">+ any university worldwide</p>
+            </div>
+          </div>
+        )}
+
+
         {/* FAQ */}
         {!isSubmitting && !status && (
           <div className="mx-auto mt-24 w-full max-w-3xl px-5 pb-24">
@@ -952,6 +1091,44 @@ function HomeInner() {
         )}
 
       </div>
+
+
+      {/* ── FOOTER ── */}
+      {!isSubmitting && !status && (
+        <footer className="relative border-t border-white/8 bg-[#050818] px-5 py-12 md:px-10">
+          <div className="mx-auto max-w-5xl">
+            <div className="mb-10 flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 text-xs font-black text-white">SP</div>
+                  <span className="text-sm font-black text-white">STUDYPACK.AI</span>
+                </div>
+                <p className="mt-2 max-w-xs text-xs leading-relaxed text-white/35">
+                  Premium AI study packs built from your actual lecture material. Not summaries — tutor-quality content.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-10 text-xs text-white/40">
+                <div className="space-y-3">
+                  <div className="font-bold uppercase tracking-widest text-white/25">Product</div>
+                  <a href="/pricing" className="block transition hover:text-white">Pricing</a>
+                  <a href="/dashboard" className="block transition hover:text-white">Dashboard</a>
+                </div>
+                <div className="space-y-3">
+                  <div className="font-bold uppercase tracking-widest text-white/25">Company</div>
+                  <a href="/contact" className="block transition hover:text-white">Contact</a>
+                  <a href="/terms" className="block transition hover:text-white">Terms of Service</a>
+                  <a href="/privacy" className="block transition hover:text-white">Privacy Policy</a>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col items-center justify-between gap-3 border-t border-white/8 pt-6 text-xs text-white/25 md:flex-row">
+              <span>© 2026 StudyPack.ai · All rights reserved</span>
+              <span>Made for students, by people who hated bad study tools.</span>
+            </div>
+          </div>
+        </footer>
+      )}
+
 
       <style jsx global>{`
         @keyframes shimmer {
