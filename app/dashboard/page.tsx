@@ -283,24 +283,22 @@ export default function DashboardPage() {
                   <div className="mb-4 flex flex-wrap gap-2">
                     {weeks.map((w) => {
                       const pack = subject.weekly_packs?.find(p => p.week_number === w);
+                      const isDone = !!pack;
                       return (
                         <div key={w} className="relative group">
                           <div
-                            className={\`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black transition \${
-                              pack
-                                ? "bg-emerald-400/20 text-emerald-400 cursor-pointer hover:bg-emerald-400/30"
-                                : "bg-white/5 text-white/20"
-                            }\`}
-                            title={pack ? \`Week \${w} — \${pack.title || "Complete"}\` : \`Week \${w} — Missing\`}
+                            className={["flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black transition",
+                              isDone ? "bg-emerald-400/20 text-emerald-400 cursor-pointer hover:bg-emerald-400/30" : "bg-white/5 text-white/20"
+                            ].join(" ")}
                           >
-                            {pack ? "✓" : w}
+                            {isDone ? "✓" : w}
                           </div>
-                          {pack && pack.master_pdf_path && (
-                            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 w-40 rounded-xl border border-white/10 bg-[#0d0f1e] p-2 shadow-xl">
-                              <p className="mb-1 text-[10px] font-bold text-white/40">Week {w}{pack.title ? \` — \${pack.title}\` : ""}</p>
+                          {isDone && pack && pack.master_pdf_path && (
+                            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 w-44 rounded-xl border border-white/10 bg-[#0d0f1e] p-2 shadow-xl">
+                              <p className="mb-1.5 text-[10px] font-bold text-white/40">Week {w}{pack.title ? " — " + pack.title : ""}</p>
                               
-                                href={pack.master_pdf_path.startsWith("http") ? pack.master_pdf_path : \`https://studypack-api.170.64.209.149.sslip.io\${pack.master_pdf_path}\`}
-                                className="block w-full rounded-lg bg-white px-3 py-1.5 text-center text-[11px] font-black text-black transition hover:scale-[1.02]"
+                                href={pack.master_pdf_path.startsWith("http") ? pack.master_pdf_path : "https://studypack-api.170.64.209.149.sslip.io" + pack.master_pdf_path}
+                                className="block w-full rounded-lg bg-white px-3 py-1.5 text-center text-xs font-black text-black transition hover:scale-105"
                               >
                                 Download PDF
                               </a>
@@ -311,7 +309,7 @@ export default function DashboardPage() {
                     })}
                   </div>
 
-                  {/* Exam Pack status */}
+                                    {/* Exam Pack status */}
                   <div className={`rounded-xl p-4 ${
                     subject.exam_pack_status === "unlocked"
                       ? "border border-emerald-400/20 bg-emerald-500/10"
