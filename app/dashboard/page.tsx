@@ -50,6 +50,14 @@ function DashboardInner() {
   const [showToast, setShowToast] = useState(paymentSuccess);
   const [showWelcome, setShowWelcome] = useState(false);
   const [userCredits, setUserCredits] = useState<number | null>(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [fbQuality, setFbQuality] = useState("5");
+  const [fbContent, setFbContent] = useState("");
+  const [fbSpeed, setFbSpeed] = useState("");
+  const [fbWouldPay, setFbWouldPay] = useState("");
+  const [fbImprove, setFbImprove] = useState("");
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.push("/");
@@ -105,6 +113,29 @@ function DashboardInner() {
 
   if (!isLoaded || !isSignedIn) return null;
 
+  const userEmail = user?.emailAddresses?.[0]?.emailAddress || "";
+  const isPilot = [
+    'pilot1@studypack.ai','pilot2@studypack.ai','pilot3@studypack.ai',
+    'pilot4@studypack.ai','pilot5@studypack.ai','pilot6@studypack.ai',
+    'pilot7@studypack.ai','pilot8@studypack.ai','pilot9@studypack.ai',
+    'pilot10@studypack.ai','paulrodgerson40@gmail.com'
+  ].includes(userEmail);
+
+  async function submitFeedback() {
+    if (!fbQuality || !fbContent || !fbSpeed || !fbWouldPay) return;
+    setFeedbackLoading(true);
+    try {
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quality: fbQuality, content: fbContent, speed: fbSpeed, wouldPay: fbWouldPay, improve: fbImprove, userEmail }),
+      });
+      setFeedbackSubmitted(true);
+      setTimeout(() => setShowFeedback(false), 2000);
+    } catch (err) { console.error(err); }
+    setFeedbackLoading(false);
+  }
+
   const totalPacks = subjects.reduce((sum, s) => sum + (s.weekly_packs?.length || 0), 0);
 
   return (
@@ -131,6 +162,124 @@ function DashboardInner() {
 
       <div className="relative mx-auto max-w-5xl px-5 py-8 md:px-10">
         <Header />
+
+        {/* Pilot feedback banner */}
+        {isPilot && !feedbackSubmitted && (
+          <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl border-2 border-amber-400/50 bg-amber-400/10 px-6 py-4 shadow-[0_0_30px_rgba(251,191,36,0.1)]">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🧪</span>
+              <div>
+                <div className="text-sm font-black text-amber-300">You're a StudyPack Pilot!</div>
+                <div className="text-xs text-amber-300/60">Help us improve — share your experience after generating a pack.</div>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowFeedback(true)}
+              className="shrink-0 rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-black text-black transition hover:bg-amber-300"
+            >
+              Give Feedback →
+            </button>
+          </div>
+        )}
+
+        {/* Feedback modal */}
+        {showFeedback && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+            <div className="w-full max-w-lg rounded-2xl border border-amber-400/30 bg-[#0d0f1e] p-8 shadow-[0_0_60px_rgba(0,0,0,0.6)]">
+              {feedbackSubmitted ? (
+                <div className="text-center py-6">
+                  <div className="text-4xl mb-3">🎉</div>
+                  <h3 className="text-xl font-black text-white mb-2">Thanks for the feedback!</h3>
+                  <p className="text-sm text-white/50">This helps us build a better product.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-6 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-widest text-amber-400/70 mb-1">🧪 Pilot Feedback</div>
+                      <h3 className="text-xl font-black text-white">How's StudyPack.ai?</h3>
+                    </div>
+                    <button onClick={() => setShowFeedback(false)} className="text-white/30 hover:text-white/70 text-2xl leading-none">×</button>
+                  </div>
+
+                  <div className="space-y-5">
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-white/40">⭐ Pack quality (1–5)</label>
+                      <div className="flex gap-2">
+                        {["1","2","3","4","5"].map(n => (
+                          <button key={n} onClick={() => setFbQuality(n)}
+                            className={`flex-1 rounded-xl py-2.5 text-sm font-black transition ${fbQuality === n ? "bg-amber-400 text-black" : "border border-white/10 text-white/50 hover:bg-white/5"}`}>
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-white/40">📚 Content matched your lecture?</label>
+                      <div className="flex gap-2">
+                        {["Yes","Mostly","No"].map(o => (
+                          <button key={o} onClick={() => setFbContent(o)}
+                            className={`flex-1 rounded-xl py-2.5 text-sm font-black transition ${fbContent === o ? "bg-amber-400 text-black" : "border border-white/10 text-white/50 hover:bg-white/5"}`}>
+                            {o}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-white/40">⚡ Generation speed</label>
+                      <div className="flex gap-2">
+                        {["Too slow","Fine","Fast"].map(o => (
+                          <button key={o} onClick={() => setFbSpeed(o)}
+                            className={`flex-1 rounded-xl py-2.5 text-sm font-black transition ${fbSpeed === o ? "bg-amber-400 text-black" : "border border-white/10 text-white/50 hover:bg-white/5"}`}>
+                            {o}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-white/40">🔁 Would you pay for this?</label>
+                      <div className="flex gap-2">
+                        {["Definitely","Maybe","No"].map(o => (
+                          <button key={o} onClick={() => setFbWouldPay(o)}
+                            className={`flex-1 rounded-xl py-2.5 text-sm font-black transition ${fbWouldPay === o ? "bg-amber-400 text-black" : "border border-white/10 text-white/50 hover:bg-white/5"}`}>
+                            {o}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-white/40">💬 What would you improve? (optional)</label>
+                      <textarea
+                        value={fbImprove}
+                        onChange={e => setFbImprove(e.target.value)}
+                        placeholder="Tell us anything..."
+                        rows={3}
+                        className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white placeholder:text-white/20 focus:border-amber-400/50 focus:outline-none resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex gap-3">
+                    <button onClick={() => setShowFeedback(false)}
+                      className="flex-1 rounded-xl border border-white/10 py-3 text-sm font-bold text-white/50 transition hover:bg-white/5">
+                      Cancel
+                    </button>
+                    <button
+                      onClick={submitFeedback}
+                      disabled={!fbQuality || !fbContent || !fbSpeed || !fbWouldPay || feedbackLoading}
+                      className="flex-1 rounded-xl bg-amber-400 py-3 text-sm font-black text-black transition hover:bg-amber-300 disabled:opacity-40">
+                      {feedbackLoading ? "Sending..." : "Submit Feedback"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Page heading */}
         <div className="mb-8 flex items-center justify-between">
