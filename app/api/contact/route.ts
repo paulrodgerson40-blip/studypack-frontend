@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     await resend.emails.send({
       from: "StudyPack.ai <noreply@studypack.ai>",
       to: "support@studypack.ai",
+      replyTo: email,
       subject: `New contact message from ${name}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0d0f1e; color: #ffffff; border-radius: 12px; overflow: hidden;">
