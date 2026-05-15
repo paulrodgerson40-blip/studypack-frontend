@@ -531,7 +531,6 @@ export default function Home() {
 
 
 
-                </FormField>
 
                 <FormField label="Upload lecture files">
                   <div
