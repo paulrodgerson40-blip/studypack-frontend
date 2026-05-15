@@ -315,9 +315,8 @@ function DashboardInner() {
                         );
                       }
 
-                      // Ungenerated week — only show Generate button on the very next one
-                      const isNext = !completedNums.has(w) &&
-                        weeks.slice(0, w - 1).every(prev => completedNums.has(prev));
+                      // Show Generate button on all ungenerated weeks
+                      const isNext = !completedNums.has(w);
 
                       return (
                         <div
