@@ -1041,10 +1041,10 @@ function HomeInner() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                { name: "Starter", credits: 5,  price: 14.95, per: "2.99", popular: false, saving: null },
-                { name: "Plus",    credits: 10, price: 28.40, per: "2.84", popular: true,  saving: "Save 5%" },
-                { name: "Value",   credits: 20, price: 53.80, per: "2.69", popular: false, saving: "Save 10%" },
-                { name: "Pro",     credits: 50, price: 119.60, per: "2.39", popular: false, saving: "Save 20%" },
+                { name: "Starter", credits: 5,  price: 14.99, per: "2.99", popular: false, saving: null },
+                { name: "Plus",    credits: 10, price: 27.99, per: "2.79", popular: true,  saving: "Save 7%" },
+                { name: "Value",   credits: 20, price: 52.99, per: "2.64", popular: false, saving: "Save 12%" },
+                { name: "Pro",     credits: 50, price: 119.99, per: "2.39", popular: false, saving: "Save 20%" },
               ].map((plan) => (
                 <div key={plan.name} className={[
                   "relative rounded-2xl border p-6 transition",
