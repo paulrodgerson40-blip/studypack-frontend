@@ -412,7 +412,7 @@ function HomeInner() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#050818] text-white">
+    <main className="min-h-screen bg-[#050818] text-white">
 
       {/* Background glows */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -983,15 +983,15 @@ function HomeInner() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
               {[
-                { emoji: "🎯", title: "Lecture Hotspots", body: "The 8–12 most examinable concepts from your lecture, ranked by assessment probability." },
-                { emoji: "📖", title: "Deep Study Notes", body: "Full tutor-written notes on every key topic. Not bullet points — proper explanations you can actually learn from." },
-                { emoji: "✍️", title: "Model Answers", body: "Exam-style questions with full model answers written to the mark scheme of your subject." },
-                { emoji: "⚔️", title: "Attack Sheet", body: "A one-page cram sheet with the highest-yield facts, definitions and formulas for last-minute revision." },
-                { emoji: "🔗", title: "Concept Links", body: "How this week's content connects to previous weeks and likely exam themes — the big picture." },
-                { emoji: "📊", title: "Week Summary", body: "A structured overview of every topic covered, with difficulty ratings and time-to-master estimates." },
+                { icon: "◈", color: "text-indigo-400", title: "Lecture Hotspots", body: "The 8–12 most examinable concepts from your lecture, ranked by assessment probability." },
+                { icon: "◉", color: "text-cyan-400", title: "Deep Study Notes", body: "Full tutor-written notes on every key topic. Not bullet points — proper explanations you can actually learn from." },
+                { icon: "◆", color: "text-emerald-400", title: "Model Answers", body: "Exam-style questions with full model answers written to the mark scheme of your subject." },
+                { icon: "▲", color: "text-rose-400", title: "Attack Sheet", body: "A one-page cram sheet with the highest-yield facts, definitions and formulas for last-minute revision." },
+                { icon: "⬡", color: "text-violet-400", title: "Concept Links", body: "How this week's content connects to previous weeks and likely exam themes — the big picture." },
+                { icon: "▣", color: "text-amber-400", title: "Week Summary", body: "A structured overview of every topic covered, with difficulty ratings and time-to-master estimates." },
               ].map((item) => (
                 <div key={item.title} className="rounded-2xl border border-white/8 bg-white/[0.03] p-6 transition hover:border-emerald-400/20 hover:bg-emerald-500/5">
-                  <div className="mb-3 text-2xl">{item.emoji}</div>
+                  <div className={`mb-3 text-xl font-black ${item.color}`}>{item.icon}</div>
                   <h3 className="mb-2 text-sm font-black text-white">{item.title}</h3>
                   <p className="text-xs leading-relaxed text-white/45">{item.body}</p>
                 </div>
