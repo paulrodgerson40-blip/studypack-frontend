@@ -226,6 +226,14 @@ function HomeInner() {
     fetch("/api/user/credits").then(r => r.json()).then(d => setUserCredits(d.credits ?? 0));
   }, [isSignedIn]);
 
+  // Detect region for geo-aware pricing
+  useEffect(() => {
+    fetch("/api/region")
+      .then(r => r.json())
+      .then(d => { if (d.isUS) setIsUS(true); })
+      .catch(() => {});
+  }, []);
+
   // Re-fetch credits whenever the tab regains focus (e.g. after buying credits on pricing page)
   useEffect(() => {
     if (!isSignedIn) return;
@@ -252,6 +260,7 @@ function HomeInner() {
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
+  const [isUS, setIsUS] = useState(false);
 
   const startedAtRef = useRef<number | null>(null);
   const finalElapsedRef = useRef<number | null>(null);
@@ -1041,10 +1050,10 @@ function HomeInner() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                { name: "Starter", credits: 5,  price: 14.99, per: "2.99", popular: false, saving: null },
-                { name: "Plus",    credits: 10, price: 27.99, per: "2.79", popular: true,  saving: "Save 7%" },
-                { name: "Value",   credits: 20, price: 52.99, per: "2.64", popular: false, saving: "Save 12%" },
-                { name: "Pro",     credits: 50, price: 119.99, per: "2.39", popular: false, saving: "Save 20%" },
+                { name: "Starter", credits: 5,  aud: 14.99, usd: 9.99,  audPer: "2.99", usdPer: "1.99", popular: false, saving: null },
+                { name: "Plus",    credits: 10, aud: 27.99, usd: 18.99, audPer: "2.79", usdPer: "1.89", popular: true,  saving: "Save 7%" },
+                { name: "Value",   credits: 20, aud: 52.99, usd: 34.99, audPer: "2.64", usdPer: "1.74", popular: false, saving: "Save 12%" },
+                { name: "Pro",     credits: 50, aud: 119.99, usd: 79.99, audPer: "2.39", usdPer: "1.59", popular: false, saving: "Save 20%" },
               ].map((plan) => (
                 <div key={plan.name} className={[
                   "relative rounded-2xl border p-6 transition",
@@ -1061,7 +1070,7 @@ function HomeInner() {
                   <div className="mb-1 flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">${plan.price.toFixed(2)}</span>
                   </div>
-                  <div className="mb-1 text-xs text-white/40">{plan.credits} credits · ${plan.per}/pack AUD</div>
+                  <div className="mb-1 text-xs text-white/40">{plan.credits} credits · ${isUS ? plan.usdPer : plan.audPer}/pack {isUS ? "USD" : "AUD"}</div>
                   {plan.saving && <div className="mb-3 text-xs font-bold text-emerald-400">{plan.saving}</div>}
                   {!plan.saving && <div className="mb-3" />}
                   <div className="mb-5 space-y-2">
