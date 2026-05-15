@@ -317,19 +317,7 @@ function DashboardInner() {
           </Link>
         </div>
 
-        {/* Stats row */}
-        <div className="mb-8 grid gap-4 md:grid-cols-3">
-          {[
-            { label: "Subjects", value: subjects.length },
-            { label: "Weekly Packs", value: totalPacks },
-            { label: "Exam Packs Unlocked", value: subjects.filter(s => s.exam_pack_status === "unlocked").length },
-          ].map(stat => (
-            <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-              <div className="text-xs font-bold uppercase tracking-widest text-white/30">{stat.label}</div>
-              <div className="mt-2 text-4xl font-black text-white">{stat.value}</div>
-            </div>
-          ))}
-        </div>
+
 
         {/* My Subjects header */}
         <div className="mb-6 flex items-center justify-between">
