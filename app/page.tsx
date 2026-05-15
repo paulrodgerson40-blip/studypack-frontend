@@ -196,7 +196,7 @@ function targetProgress(stage: StageKey, elapsed: number, backendPct: number): n
 
 export default function Home() {
   const { isSignedIn } = useUser();
-  const [subjects, setSubjects] = useState<{id: string, name: string, code: string, total_weeks: number}[]>([]);
+  const [subjects, setSubjects] = useState<{id: string, name: string, code: string, total_weeks: number, weekly_packs?: {week_number: number}[]}[]>([]);
   const [subjectsLoaded, setSubjectsLoaded] = useState(false);
   const [userCredits, setUserCredits] = useState<number | null>(null);
   const [selectedSubject, setSelectedSubject] = useState("");
