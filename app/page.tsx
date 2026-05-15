@@ -481,7 +481,7 @@ export default function Home() {
                       <select
                         value={selectedSubject}
                         onChange={(e) => { setSelectedSubject(e.target.value); setSelectedWeek(""); }}
-                        className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition"
+                        className="w-full rounded-xl border border-white/10 bg-[#0d0f1e] px-4 py-3 text-sm text-white outline-none focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition appearance-none cursor-pointer"
                       >
                         <option value="">Select a subject</option>
                         {subjects.map(s => (
@@ -496,7 +496,7 @@ export default function Home() {
                         <select
                           value={selectedWeek}
                           onChange={(e) => setSelectedWeek(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition"
+                          className="w-full rounded-xl border border-white/10 bg-[#0d0f1e] px-4 py-3 text-sm text-white outline-none focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition appearance-none cursor-pointer"
                         >
                           <option value="">Select a week</option>
                           {Array.from({ length: subjects.find(s => s.id === selectedSubject)?.total_weeks || 10 }, (_, i) => i + 1).map(w => (
@@ -531,13 +531,6 @@ export default function Home() {
 
 
 
-                <FormField label="Topic override (optional)">
-                  <input
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    placeholder="Leave blank for auto-detection"
-                    className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/22 focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition"
-                  />
                 </FormField>
 
                 <FormField label="Upload lecture files">
