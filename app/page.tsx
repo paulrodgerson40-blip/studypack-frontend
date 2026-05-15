@@ -461,7 +461,7 @@ function HomeInner() {
 
         {/* ── UPLOAD ── */}
         {!isGenerating && !isComplete && !isFailed && (
-          <div className="grid flex-1 items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid flex-1 items-start gap-8 lg:items-center lg:gap-12 lg:grid-cols-[1.1fr_0.9fr]">
 
             {/* Left: Hero */}
             <div>
@@ -988,7 +988,7 @@ function HomeInner() {
               <h2 className="text-3xl font-black text-white md:text-4xl">How it works</h2>
               <p className="mt-3 text-sm text-white/40">From lecture notes to exam-ready in under 4 minutes.</p>
             </div>
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-3">
               {[
                 { step: "01", icon: "↑", title: "Upload your material", body: "Drop in your weekly lecture transcript and slides — PDF, DOCX, PPTX or TXT. Up to 4 files, any university, any subject." },
                 { step: "02", icon: "⚡", title: "AI builds your pack", body: "Our system reads your actual content and writes a tutor-quality 30–38 page StudyPack in 2–4 minutes. No generic summaries." },
@@ -1018,7 +1018,7 @@ function HomeInner() {
               <h2 className="text-3xl font-black text-white md:text-4xl">What's inside every pack</h2>
               <p className="mt-3 text-sm text-white/40">Six sections. Everything a private tutor would give you.</p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
               {[
                 { icon: "◈", color: "text-indigo-400", title: "Lecture Hotspots", body: "The 8–12 most examinable concepts from your lecture, ranked by assessment probability." },
                 { icon: "◉", color: "text-cyan-400", title: "Deep Study Notes", body: "Full tutor-written notes on every key topic. Not bullet points — proper explanations you can actually learn from." },
@@ -1048,7 +1048,7 @@ function HomeInner() {
               <h2 className="text-3xl font-black text-white md:text-4xl">Pay only for what you use</h2>
               <p className="mt-3 text-sm text-white/40">No subscriptions. Credits never expire. 1 credit = 1 weekly pack.</p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 { name: "Starter", credits: 5,  aud: 14.99, usd: 9.99,  audPer: "2.99", usdPer: "1.99", popular: false, saving: null },
                 { name: "Plus",    credits: 10, aud: 27.99, usd: 18.99, audPer: "2.79", usdPer: "1.89", popular: true,  saving: "Save 7%" },
