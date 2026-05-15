@@ -184,15 +184,21 @@ function inferStage(status: JobStatus | null, elapsed: number): StageKey {
 }
 
 function targetProgress(stage: StageKey, elapsed: number, backendPct: number): number {
+  // Total job ~200s: upload/extract 0-20s (0-12%), generating 20-175s (12-88%), rendering 175-200s (88-99%)
   if (stage === "complete") return 100;
-  if (stage === "rendering") return Math.max(88, Math.min(98, backendPct));
-  if (stage === "generating") {
-    const genElapsed = Math.max(0, elapsed - 22);
-    const pct = Math.min(genElapsed / 156, 0.93);
-    return Math.max(12, 12 + pct * 76);
+  if (stage === "rendering") {
+    // Rendering takes ~25s, smoothly go from 88% to 99%
+    const renderElapsed = Math.max(0, elapsed - 175);
+    return Math.max(88, Math.min(99, 88 + (renderElapsed / 25) * 11));
   }
-  if (stage === "extract") return Math.max(5, Math.min(12, 5 + ((elapsed - 8) / 14) * 7));
-  return Math.max(2, Math.min(5, (elapsed / 8) * 5));
+  if (stage === "generating") {
+    // Generating takes ~155s (20s to 175s), go from 12% to 88%
+    const genElapsed = Math.max(0, elapsed - 20);
+    const pct = Math.min(genElapsed / 155, 1);
+    return Math.max(12, Math.min(88, 12 + pct * 76));
+  }
+  if (stage === "extract") return Math.max(5, Math.min(12, 5 + ((elapsed - 5) / 15) * 7));
+  return Math.max(2, Math.min(5, (elapsed / 5) * 5));
 }
 
 function HomeInner() {
