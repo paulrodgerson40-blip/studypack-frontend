@@ -198,6 +198,7 @@ export default function Home() {
   const { isSignedIn } = useUser();
   const [subjects, setSubjects] = useState<{id: string, name: string, code: string, total_weeks: number}[]>([]);
   const [subjectsLoaded, setSubjectsLoaded] = useState(false);
+  const [userCredits, setUserCredits] = useState<number | null>(null);
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedWeek, setSelectedWeek] = useState("");
   const [packTitle, setPackTitle] = useState("");
@@ -220,6 +221,7 @@ export default function Home() {
     fetch("/api/subjects")
       .then(r => r.json())
       .then(d => { setSubjects(d.subjects || []); setSubjectsLoaded(true); });
+    fetch("/api/user/credits").then(r => r.json()).then(d => setUserCredits(d.credits ?? 0));
   }, [isSignedIn]);
   const startedAtRef = useRef<number | null>(null);
   const finalElapsedRef = useRef<number | null>(null);
@@ -585,19 +587,38 @@ export default function Home() {
                   </div>
                 )}
 
-                <button
-                  disabled={!canSubmit}
-                  className={`w-full rounded-xl py-4 text-sm font-black uppercase tracking-[0.18em] transition-all ${
-                    canSubmit
-                      ? "bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.12)] hover:scale-[1.015] hover:shadow-[0_0_40px_rgba(255,255,255,0.18)]"
-                      : "cursor-not-allowed bg-white/15 text-white/30"
-                  }`}
-                >
-                  {isSubmitting ? "Starting..." : "Generate StudyPack →"}
-                </button>
 
+                {isSignedIn && selectedSubject && selectedWeek && (userCredits ?? 0) > 0 ? (
+                  <button
+                    disabled={!canSubmit}
+                    className={`w-full rounded-xl py-4 text-sm font-black uppercase tracking-[0.18em] transition-all ${
+                      canSubmit
+                        ? "bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.12)] hover:scale-[1.015] hover:shadow-[0_0_40px_rgba(255,255,255,0.18)]"
+                        : "cursor-not-allowed bg-white/15 text-white/30"
+                    }`}
+                  >
+                    {isSubmitting ? "Generating..." : "⚡ Generate StudyPack — 1 Credit"}
+                  </button>
+                ) : isSignedIn && selectedSubject && selectedWeek && (userCredits ?? 0) === 0 ? (
+                  <a href="/pricing" className="block w-full rounded-xl bg-indigo-500 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-indigo-400">
+                    Buy Credits to Generate
+                  </a>
+                ) : (
+                  <button
+                    disabled={!canSubmit}
+                    className={`w-full rounded-xl py-4 text-sm font-black uppercase tracking-[0.18em] transition-all ${
+                      canSubmit
+                        ? "bg-white/20 text-white hover:scale-[1.015] hover:bg-white/25"
+                        : "cursor-not-allowed bg-white/10 text-white/30"
+                    }`}
+                  >
+                    {isSubmitting ? "Generating..." : "Generate Free Preview →"}
+                  </button>
+                )}
                 <p className="text-center text-[11px] text-white/25">
-                  Free preview · Premium full pack · studypack.ai
+                  {isSignedIn && selectedSubject && selectedWeek
+                    ? "1 credit · Full 30–38 page pack · Saved to dashboard"
+                    : "Free 6-page preview · No account needed"}
                 </p>
                 <div className="rounded-xl border border-indigo-400/15 bg-indigo-400/8 px-4 py-3 text-center">
                   <p className="text-xs leading-5 text-indigo-200/70">
