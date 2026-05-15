@@ -451,6 +451,18 @@ function DashboardInner() {
           </div>
         )}
       </div>
+      {/* Footer */}
+      <footer className="relative border-t border-white/8 px-5 py-8 md:px-10 mt-12">
+        <div className="mx-auto max-w-5xl flex flex-col items-center justify-between gap-4 text-xs text-white/25 md:flex-row">
+          <span>© 2026 StudyPack.ai · All rights reserved</span>
+          <div className="flex gap-6">
+            <a href="/pricing" className="transition hover:text-white/60">Pricing</a>
+            <a href="/contact" className="transition hover:text-white/60">Contact</a>
+            <a href="/terms" className="transition hover:text-white/60">Terms</a>
+            <a href="/privacy" className="transition hover:text-white/60">Privacy</a>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
