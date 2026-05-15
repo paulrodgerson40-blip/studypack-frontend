@@ -48,6 +48,7 @@ function DashboardInner() {
   });
   const [saving, setSaving] = useState(false);
   const [showToast, setShowToast] = useState(paymentSuccess);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.push("/");
@@ -78,7 +79,9 @@ function DashboardInner() {
     setLoading(true);
     const res = await fetch("/api/subjects");
     const data = await res.json();
-    setSubjects(data.subjects || []);
+    const subs = data.subjects || [];
+    setSubjects(subs);
+    if (subs.length === 0) setShowWelcome(true);
     setLoading(false);
   }
 
@@ -221,16 +224,52 @@ function DashboardInner() {
         {loading ? (
           <div className="py-16 text-center text-white/30">Loading...</div>
         ) : subjects.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-12 text-center">
-            <div className="mb-3 text-4xl">📚</div>
-            <h3 className="text-lg font-black text-white">No subjects yet</h3>
-            <p className="mt-2 text-sm text-white/40">Add your first subject to start building your study library.</p>
-            <button
-              onClick={() => setShowNewSubject(true)}
-              className="mt-4 rounded-xl bg-indigo-500 px-6 py-3 text-sm font-black text-white transition hover:bg-indigo-400"
-            >
-              + Add Subject
-            </button>
+          <div className="space-y-4">
+            {/* Welcome banner */}
+            {showWelcome && (
+              <div className="relative rounded-2xl border border-indigo-400/30 bg-indigo-500/10 p-7">
+                <button
+                  onClick={() => setShowWelcome(false)}
+                  className="absolute right-4 top-4 text-white/30 transition hover:text-white/70 text-xl leading-none"
+                >×</button>
+                <div className="mb-1 text-xs font-bold uppercase tracking-widest text-indigo-300/70">Welcome to StudyPack.ai</div>
+                <h3 className="mb-2 text-xl font-black text-white">Let's build your first study pack 🎉</h3>
+                <p className="mb-6 text-sm text-white/50 max-w-lg">You have <span className="font-bold text-white">10 credits</span> ready to use. Each credit generates one full premium StudyPack from your lecture material. Here's how to get started:</p>
+                <div className="grid gap-3 sm:grid-cols-3 mb-6">
+                  {[
+                    { step: "1", title: "Add a subject", body: "Create a subject for each course you're studying — e.g. LAW340 Equity & Trusts." },
+                    { step: "2", title: "Upload your lecture", body: "Upload your weekly lecture transcript or slides (PDF, DOCX, PPTX or TXT)." },
+                    { step: "3", title: "Get your pack", body: "In 2–4 minutes you'll have a 30–38 page premium study pack ready to download." },
+                  ].map(s => (
+                    <div key={s.step} className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                      <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-full bg-indigo-500/30 text-xs font-black text-indigo-300">{s.step}</div>
+                      <div className="mb-1 text-sm font-black text-white">{s.title}</div>
+                      <div className="text-xs leading-relaxed text-white/45">{s.body}</div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => { setShowWelcome(false); setShowNewSubject(true); }}
+                  className="rounded-xl bg-indigo-500 px-6 py-3 text-sm font-black text-white transition hover:bg-indigo-400"
+                >
+                  + Add your first subject →
+                </button>
+              </div>
+            )}
+            {/* Empty state */}
+            {!showWelcome && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-12 text-center">
+                <div className="mb-3 text-4xl">📚</div>
+                <h3 className="text-lg font-black text-white">No subjects yet</h3>
+                <p className="mt-2 text-sm text-white/40">Add your first subject to start building your study library.</p>
+                <button
+                  onClick={() => setShowNewSubject(true)}
+                  className="mt-4 rounded-xl bg-indigo-500 px-6 py-3 text-sm font-black text-white transition hover:bg-indigo-400"
+                >
+                  + Add Subject
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-6">
