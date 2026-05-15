@@ -870,7 +870,7 @@ export default function Home() {
                 {isSignedIn && selectedSubject ? (
                   <>
                     
-                      href={`/dashboard?highlight=${selectedWeek}&subject=${selectedSubject}`}
+                      href={"/dashboard?highlight=" + selectedWeek + "&subject=" + selectedSubject}
                       className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-6 py-4 text-sm font-black text-black shadow-[0_0_40px_rgba(52,211,153,0.30)] transition hover:scale-[1.02]"
                     >
                       ✓ View in Dashboard →
