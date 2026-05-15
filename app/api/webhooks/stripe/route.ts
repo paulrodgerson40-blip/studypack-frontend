@@ -17,12 +17,8 @@ export async function POST(req: Request) {
     return new NextResponse("Invalid signature", { status: 400 });
   }
 
-  console.log("Webhook event type:", event.type);
-
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    console.log("Session metadata:", session.metadata);
-    console.log("Session ID:", session.id);
 
     const metadata = session.metadata || {};
     const supabase_user_id = metadata.supabase_user_id;
@@ -31,6 +27,19 @@ export async function POST(req: Request) {
     if (!supabase_user_id || !credits) {
       console.error("Missing metadata:", metadata);
       return new NextResponse("Missing metadata", { status: 400 });
+    }
+
+    // ── Duplicate protection: check if this session was already processed ──
+    const { data: existing } = await supabaseAdmin
+      .from("credit_transactions")
+      .select("id")
+      .eq("stripe_session_id", session.id)
+      .maybeSingle();
+
+    if (existing) {
+      // Already processed — return 200 so Stripe stops retrying
+      console.log("Duplicate webhook ignored for session:", session.id);
+      return new NextResponse("Already processed", { status: 200 });
     }
 
     const creditsNum = parseInt(credits);
@@ -59,6 +68,8 @@ export async function POST(req: Request) {
           credits: creditsNum,
           stripe_session_id: session.id,
         });
+
+      console.log(`Added ${creditsNum} credits to user ${supabase_user_id} for session ${session.id}`);
     }
   }
 
