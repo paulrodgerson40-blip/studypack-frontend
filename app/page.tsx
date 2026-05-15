@@ -226,6 +226,20 @@ function HomeInner() {
     fetch("/api/user/credits").then(r => r.json()).then(d => setUserCredits(d.credits ?? 0));
   }, [isSignedIn]);
 
+  // Re-fetch credits whenever the tab regains focus (e.g. after buying credits on pricing page)
+  useEffect(() => {
+    if (!isSignedIn) return;
+    const refreshCredits = () => {
+      fetch("/api/user/credits").then(r => r.json()).then(d => setUserCredits(d.credits ?? 0));
+    };
+    window.addEventListener("focus", refreshCredits);
+    window.addEventListener("credits-updated", refreshCredits);
+    return () => {
+      window.removeEventListener("focus", refreshCredits);
+      window.removeEventListener("credits-updated", refreshCredits);
+    };
+  }, [isSignedIn]);
+
   // Pre-select subject/week from URL params (e.g. coming from dashboard Generate button)
   useEffect(() => {
     const paramSubject = searchParams.get("subject");
@@ -620,7 +634,11 @@ function HomeInner() {
                 )}
 
 
-                {isSignedIn && selectedSubject && selectedWeek && (userCredits ?? 0) > 0 ? (
+                {isSignedIn && selectedSubject && selectedWeek && userCredits === null ? (
+                  <button disabled className="w-full cursor-not-allowed rounded-xl bg-white/10 py-4 text-sm font-black uppercase tracking-[0.18em] text-white/30">
+                    Loading...
+                  </button>
+                ) : isSignedIn && selectedSubject && selectedWeek && (userCredits ?? 0) > 0 ? (
                   <button
                     disabled={!canSubmit}
                     className={`w-full rounded-xl py-4 text-sm font-black uppercase tracking-[0.18em] transition-all ${
