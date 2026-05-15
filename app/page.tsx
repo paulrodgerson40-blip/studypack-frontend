@@ -1031,10 +1031,10 @@ function HomeInner() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                { name: "Starter", credits: 5, price: 10, per: "2.00", popular: false },
-                { name: "Plus", credits: 10, price: 19, per: "1.90", popular: true },
-                { name: "Value", credits: 20, price: 36, per: "1.80", popular: false },
-                { name: "Pro", credits: 50, price: 85, per: "1.70", popular: false },
+                { name: "Starter", credits: 5,  price: 14.95, per: "2.99", popular: false, saving: null },
+                { name: "Plus",    credits: 10, price: 28.40, per: "2.84", popular: true,  saving: "Save 5%" },
+                { name: "Value",   credits: 20, price: 53.80, per: "2.69", popular: false, saving: "Save 10%" },
+                { name: "Pro",     credits: 50, price: 119.60, per: "2.39", popular: false, saving: "Save 20%" },
               ].map((plan) => (
                 <div key={plan.name} className={[
                   "relative rounded-2xl border p-6 transition",
@@ -1051,7 +1051,9 @@ function HomeInner() {
                   <div className="mb-1 flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">${plan.price}</span>
                   </div>
-                  <div className="mb-4 text-xs text-white/40">{plan.credits} credits · ${plan.per} each</div>
+                  <div className="mb-1 text-xs text-white/40">{plan.credits} credits · ${plan.per}/pack AUD</div>
+                  {plan.saving && <div className="mb-3 text-xs font-bold text-emerald-400">{plan.saving}</div>}
+                  {!plan.saving && <div className="mb-3" />}
                   <div className="mb-5 space-y-2">
                     <div className="flex items-center gap-2 text-xs text-white/60">
                       <span className="text-emerald-400">✓</span>{plan.credits} weekly packs
