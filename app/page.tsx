@@ -203,7 +203,6 @@ function HomeInner() {
   const [userCredits, setUserCredits] = useState<number | null>(null);
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedWeek, setSelectedWeek] = useState("");
-  const [packTitle, setPackTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [week, setWeek] = useState("");
   const [topic, setTopic] = useState("");
@@ -349,7 +348,7 @@ function HomeInner() {
             body: JSON.stringify({
               subject_id: selectedSubject,
               week_number: selectedWeek,
-              title: packTitle || null,
+              title: null,
               job_id: jobId,
               master_pdf_path: data.premium_download_url || null,
             }),
@@ -562,14 +561,7 @@ function HomeInner() {
                         ⚠️ Week {selectedWeek} already has a StudyPack. Generating will overwrite it.
                       </div>
                     )}
-                    <FormField label="Pack title (optional)">
-                      <input
-                        value={packTitle}
-                        onChange={(e) => setPackTitle(e.target.value)}
-                        placeholder="e.g. Introduction to Equity"
-                        className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/22 focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition"
-                      />
-                    </FormField>
+
                   </>
                 )}
 
