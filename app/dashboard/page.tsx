@@ -38,6 +38,7 @@ function DashboardInner() {
   const searchParams = useSearchParams();
   const highlightWeek = searchParams.get("highlight");
   const highlightSubject = searchParams.get("subject");
+  const paymentSuccess = searchParams.get("success") === "1";
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [showNewSubject, setShowNewSubject] = useState(false);
@@ -46,10 +47,18 @@ function DashboardInner() {
     name: "", code: "", university: "", total_weeks: "10", semester: "",
   });
   const [saving, setSaving] = useState(false);
+  const [showToast, setShowToast] = useState(paymentSuccess);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.push("/");
   }, [isLoaded, isSignedIn, router]);
+
+  // Auto-dismiss success toast after 5 seconds
+  useEffect(() => {
+    if (!showToast) return;
+    const t = setTimeout(() => setShowToast(false), 5000);
+    return () => clearTimeout(t);
+  }, [showToast]);
 
   useEffect(() => {
     if (!isSignedIn) return;
@@ -96,6 +105,20 @@ function DashboardInner() {
   return (
     <main className="min-h-screen bg-[#050818] text-white">
       {/* Background blobs */}
+      {/* ── Payment success toast ── */}
+      {showToast && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-bounce-once">
+          <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/20 px-6 py-4 shadow-[0_0_40px_rgba(52,211,153,0.15)] backdrop-blur-sm">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-400 text-sm font-black text-black">✓</div>
+            <div>
+              <div className="text-sm font-black text-white">Payment successful!</div>
+              <div className="text-xs text-white/50">Credits have been added to your account.</div>
+            </div>
+            <button onClick={() => setShowToast(false)} className="ml-2 text-white/30 transition hover:text-white/70 text-lg leading-none">×</button>
+          </div>
+        </div>
+      )}
+
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -left-32 -top-32 h-[600px] w-[600px] rounded-full bg-indigo-700/25 blur-[140px]" />
         <div className="absolute -right-32 top-24 h-[500px] w-[500px] rounded-full bg-cyan-600/15 blur-[140px]" />
