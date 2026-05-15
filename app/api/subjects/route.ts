@@ -16,7 +16,7 @@ export async function GET() {
 
   const { data: subjects } = await supabaseAdmin
     .from("subjects")
-    .select("*, weekly_packs(id, week_number, title, status)")
+    .select("*, weekly_packs(id, week_number, title, status, master_pdf_path, job_id)")
     .eq("user_id", profile.id)
     .order("created_at", { ascending: false });
 

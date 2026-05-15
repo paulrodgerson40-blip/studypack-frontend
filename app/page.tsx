@@ -352,6 +352,7 @@ export default function Home() {
           return;
         }
         setUserCredits(prev => prev !== null ? prev - 1 : null);
+        window.dispatchEvent(new Event("credits-updated"));
       }
 
 

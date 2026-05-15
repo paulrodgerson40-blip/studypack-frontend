@@ -11,6 +11,8 @@ type WeeklyPack = {
   week_number: number;
   title: string;
   status: string;
+  master_pdf_path: string | null;
+  job_id: string | null;
 };
 
 type Subject = {
@@ -279,19 +281,34 @@ export default function DashboardPage() {
 
                   {/* Week grid */}
                   <div className="mb-4 flex flex-wrap gap-2">
-                    {weeks.map((w) => (
-                      <div
-                        key={w}
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black transition ${
-                          completedWeekNumbers.has(w)
-                            ? "bg-emerald-400/20 text-emerald-400"
-                            : "bg-white/5 text-white/20"
-                        }`}
-                        title={completedWeekNumbers.has(w) ? `Week ${w} — Complete` : `Week ${w} — Missing`}
-                      >
-                        {completedWeekNumbers.has(w) ? "✓" : w}
-                      </div>
-                    ))}
+                    {weeks.map((w) => {
+                      const pack = subject.weekly_packs?.find(p => p.week_number === w);
+                      return (
+                        <div key={w} className="relative group">
+                          <div
+                            className={\`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black transition \${
+                              pack
+                                ? "bg-emerald-400/20 text-emerald-400 cursor-pointer hover:bg-emerald-400/30"
+                                : "bg-white/5 text-white/20"
+                            }\`}
+                            title={pack ? \`Week \${w} — \${pack.title || "Complete"}\` : \`Week \${w} — Missing\`}
+                          >
+                            {pack ? "✓" : w}
+                          </div>
+                          {pack && pack.master_pdf_path && (
+                            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 w-40 rounded-xl border border-white/10 bg-[#0d0f1e] p-2 shadow-xl">
+                              <p className="mb-1 text-[10px] font-bold text-white/40">Week {w}{pack.title ? \` — \${pack.title}\` : ""}</p>
+                              
+                                href={pack.master_pdf_path.startsWith("http") ? pack.master_pdf_path : \`https://studypack-api.170.64.209.149.sslip.io\${pack.master_pdf_path}\`}
+                                className="block w-full rounded-lg bg-white px-3 py-1.5 text-center text-[11px] font-black text-black transition hover:scale-[1.02]"
+                              >
+                                Download PDF
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Exam Pack status */}
