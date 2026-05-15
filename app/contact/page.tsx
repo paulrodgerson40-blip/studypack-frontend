@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Header from "@/components/Header";
 
 export default function ContactPage() {
   const [name, setName] = useState("");
@@ -35,7 +34,18 @@ export default function ContactPage() {
         <div className="absolute -right-32 top-24 h-[500px] w-[500px] rounded-full bg-cyan-600/15 blur-[140px]" />
       </div>
       <div className="relative mx-auto max-w-2xl px-5 py-8 md:px-10">
-        <Header />
+        <header className="mb-12 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <img src="/studypack-icon.png" alt="StudyPack.ai" className="h-10 w-10 rounded-xl shadow-[0_0_24px_rgba(91,94,244,0.30)]" />
+            <div>
+              <div className="text-sm font-black uppercase tracking-[0.38em] text-white">StudyPack.ai</div>
+              <div className="text-[10px] text-white/35">Premium AI study packs</div>
+            </div>
+          </Link>
+          <Link href="/" className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/5">
+            ← Home
+          </Link>
+        </header>
 
         <div className="mb-10 text-center">
           <h1 className="text-4xl font-black text-white">Contact us</h1>
