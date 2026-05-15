@@ -250,6 +250,9 @@ function HomeInner() {
     }
   }, [subjectsLoaded, searchParams]);
 
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
+
   const startedAtRef = useRef<number | null>(null);
   const finalElapsedRef = useRef<number | null>(null);
 
@@ -352,6 +355,13 @@ function HomeInner() {
     setError("");
     if (!files.length) return setError("Please upload your weekly lecture transcript.");
     if (fileWarnings.length) return setError(fileWarnings.join("\n"));
+
+    // Show confirmation prompt before spending a credit
+    if (isSignedIn && selectedSubject && selectedWeek && !pendingSubmit) {
+      setShowConfirm(true);
+      return;
+    }
+    setPendingSubmit(false);
 
     // Auto-detect subject/week from first filename if user left them blank
     const resolvedSubject = subject.trim() || files[0].name.replace(/\.[^.]+$/, "").slice(0, 40) || "Subject";
@@ -1153,6 +1163,43 @@ function HomeInner() {
         </footer>
       )}
 
+
+      {/* ── Credit confirmation modal ── */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#0d0f1e] p-7 shadow-[0_0_60px_rgba(0,0,0,0.6)]">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/20">
+              <span className="text-xl">⚡</span>
+            </div>
+            <h3 className="mb-2 text-lg font-black text-white">Use 1 credit?</h3>
+            <p className="mb-1 text-sm text-white/50">
+              This will generate a full premium StudyPack and deduct <span className="font-bold text-white">1 credit</span> from your account.
+            </p>
+            <p className="mb-6 text-sm text-white/30">
+              You have <span className="font-bold text-white">{userCredits}</span> credit{userCredits !== 1 ? "s" : ""} remaining.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 rounded-xl border border-white/10 py-3 text-sm font-bold text-white/60 transition hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowConfirm(false);
+                  setPendingSubmit(true);
+                  const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                  handleSubmit(fakeEvent);
+                }}
+                className="flex-1 rounded-xl bg-indigo-500 py-3 text-sm font-black text-white transition hover:bg-indigo-400"
+              >
+                Yes, generate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx global>{`
         @keyframes shimmer {
