@@ -339,6 +339,22 @@ export default function Home() {
       setIsSubmitting(true);
       setStatus({ status: "queued", progress: 2 });
 
+      // Deduct credit upfront if generating premium pack
+      if (isSignedIn && selectedSubject && selectedWeek) {
+        const creditRes = await fetch("/api/user/deduct-credit", { method: "POST" });
+        if (!creditRes.ok) {
+          const creditData = await creditRes.json();
+          setIsSubmitting(false);
+          setStatus(null);
+          setDisplayProgress(0);
+          startedAtRef.current = null;
+          setError(creditData.error || "Not enough credits.");
+          return;
+        }
+        setUserCredits(prev => prev !== null ? prev - 1 : null);
+      }
+
+
       const fd = new FormData();
       fd.append("subject", resolvedSubject);
       fd.append("week", resolvedWeek);
