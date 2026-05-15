@@ -869,13 +869,13 @@ export default function Home() {
               <div className="mx-auto mt-8 grid max-w-sm gap-3">
                 {isSignedIn && selectedSubject ? (
                   <>
-                    
+                    <a
                       href={"/dashboard?highlight=" + selectedWeek + "&subject=" + selectedSubject}
                       className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-6 py-4 text-sm font-black text-black shadow-[0_0_40px_rgba(52,211,153,0.30)] transition hover:scale-[1.02]"
                     >
                       View in Dashboard
                     </a>
-                    
+                    <a
                       href={absoluteUrl(status?.premium_download_url)}
                       className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-6 py-4 text-sm font-bold text-white/70 transition hover:bg-white/10"
                     >
@@ -884,7 +884,7 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    
+                    <a
                       href={absoluteUrl(status?.preview_download_url)}
                       className="flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-sm font-black text-black shadow-[0_0_40px_rgba(255,255,255,0.15)] transition hover:scale-[1.02]"
                     >
