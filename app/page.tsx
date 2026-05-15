@@ -369,7 +369,6 @@ function HomeInner() {
       setShowConfirm(true);
       return;
     }
-    setPendingSubmit(false);
 
     // Auto-detect subject/week from first filename if user left them blank
     // Use selected subject name+code and week number for clean filenames
@@ -1173,36 +1172,46 @@ function HomeInner() {
 
       {/* ── Credit confirmation modal ── */}
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#0d0f1e] p-7 shadow-[0_0_60px_rgba(0,0,0,0.6)]">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/20">
-              <span className="text-xl">⚡</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md px-4">
+          <div className="w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-[#0a0c1a] shadow-[0_0_80px_rgba(0,0,0,0.8)]">
+            {/* Header */}
+            <div className="border-b border-white/8 bg-indigo-500/10 px-7 py-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500 text-lg shadow-[0_0_20px_rgba(99,102,241,0.4)]">⚡</div>
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-widest text-indigo-300/70">1 Credit Required</div>
+                  <div className="text-base font-black text-white">Confirm Generation</div>
+                </div>
+              </div>
             </div>
-            <h3 className="mb-2 text-lg font-black text-white">Use 1 credit?</h3>
-            <p className="mb-1 text-sm text-white/50">
-              This will generate a full premium StudyPack and deduct <span className="font-bold text-white">1 credit</span> from your account.
-            </p>
-            <p className="mb-6 text-sm text-white/30">
-              You have <span className="font-bold text-white">{userCredits}</span> credit{userCredits !== 1 ? "s" : ""} remaining.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="flex-1 rounded-xl border border-white/10 py-3 text-sm font-bold text-white/60 transition hover:bg-white/5"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setShowConfirm(false);
-                  setPendingSubmit(true);
-                  const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-                  handleSubmit(fakeEvent);
-                }}
-                className="flex-1 rounded-xl bg-indigo-500 py-3 text-sm font-black text-white transition hover:bg-indigo-400"
-              >
-                Yes, generate
-              </button>
+            {/* Body */}
+            <div className="px-7 py-6">
+              <p className="mb-5 text-sm leading-relaxed text-white/55">
+                This will generate a full <span className="font-bold text-white">30–38 page premium StudyPack</span> from your uploaded lecture material and deduct 1 credit from your account.
+              </p>
+              <div className="mb-6 flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3">
+                <span className="text-xs text-white/40">Credits remaining after</span>
+                <span className="text-sm font-black text-white">{(userCredits ?? 1) - 1} credit{((userCredits ?? 1) - 1) !== 1 ? "s" : ""}</span>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirm(false)}
+                  className="flex-1 rounded-xl border border-white/10 py-3 text-sm font-bold text-white/50 transition hover:bg-white/5"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConfirm(false);
+                    setPendingSubmit(true);
+                    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                    handleSubmit(fakeEvent);
+                  }}
+                  className="flex-1 rounded-xl bg-indigo-500 py-3 text-sm font-black text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] transition hover:bg-indigo-400 active:scale-95"
+                >
+                  ⚡ Yes, generate
+                </button>
+              </div>
             </div>
           </div>
         </div>
