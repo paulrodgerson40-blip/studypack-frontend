@@ -499,11 +499,21 @@ export default function Home() {
                           className="w-full rounded-xl border border-white/10 bg-[#0d0f1e] px-4 py-3 text-sm text-white outline-none focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition appearance-none cursor-pointer"
                         >
                           <option value="">Select a week</option>
-                          {Array.from({ length: subjects.find(s => s.id === selectedSubject)?.total_weeks || 10 }, (_, i) => i + 1).map(w => (
-                            <option key={w} value={String(w)}>Week {w}</option>
-                          ))}
+                          {Array.from({ length: subjects.find(s => s.id === selectedSubject)?.total_weeks || 10 }, (_, i) => i + 1).map(w => {
+                            const isDone = subjects.find(s => s.id === selectedSubject)?.weekly_packs?.some((p: any) => p.week_number === w);
+                            return (
+                              <option key={w} value={String(w)}>
+                                {isDone ? "✓ " : ""}{"Week "}{w}{isDone ? " — Complete" : ""}
+                              </option>
+                            );
+                          })}
                         </select>
                       </FormField>
+                    )}
+                    {selectedWeek && subjects.find(s => s.id === selectedSubject)?.weekly_packs?.some((p: any) => p.week_number === parseInt(selectedWeek)) && (
+                      <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 p-3 text-xs text-amber-200">
+                        ⚠️ Week {selectedWeek} already has a StudyPack. Generating will overwrite it.
+                      </div>
                     )}
                     <FormField label="Pack title (optional)">
                       <input
