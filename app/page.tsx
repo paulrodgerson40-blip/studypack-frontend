@@ -372,8 +372,14 @@ function HomeInner() {
     setPendingSubmit(false);
 
     // Auto-detect subject/week from first filename if user left them blank
-    const resolvedSubject = subject.trim() || files[0].name.replace(/\.[^.]+$/, "").slice(0, 40) || "Subject";
-    const resolvedWeek    = week.trim() || "Auto-detect";
+    // Use selected subject name+code and week number for clean filenames
+    const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
+    const resolvedSubject = selectedSubjectData
+      ? (selectedSubjectData.code ? selectedSubjectData.code : selectedSubjectData.name)
+      : (subject.trim() || files[0].name.replace(/\.[^.]+$/, "").slice(0, 40) || "Subject");
+    const resolvedWeek = selectedWeek
+      ? `Week_${selectedWeek}`
+      : (week.trim() || "Auto-detect");
 
     try {
       const localStart = Date.now();
