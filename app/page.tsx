@@ -867,19 +867,33 @@ export default function Home() {
 
               {/* Downloads */}
               <div className="mx-auto mt-8 grid max-w-sm gap-3">
-                <a
-                  href={absoluteUrl(status?.premium_download_url)}
-                  className="flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-sm font-black text-black shadow-[0_0_40px_rgba(255,255,255,0.15)] transition hover:scale-[1.02]"
-                >
-                  ↓ Download Premium StudyPack
-                </a>
-                {!isSignedIn && (
-                  <a
-                    href={absoluteUrl(status?.preview_download_url)}
-                    className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-6 py-4 text-sm font-bold text-white/70 transition hover:bg-white/10"
-                  >
-                    ↓ Download Free Preview
-                  </a>
+                {isSignedIn && selectedSubject ? (
+                  <>
+                    
+                      href={`/dashboard?highlight=${selectedWeek}&subject=${selectedSubject}`}
+                      className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-6 py-4 text-sm font-black text-black shadow-[0_0_40px_rgba(52,211,153,0.30)] transition hover:scale-[1.02]"
+                    >
+                      ✓ View in Dashboard →
+                    </a>
+                    
+                      href={absoluteUrl(status?.premium_download_url)}
+                      className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-6 py-4 text-sm font-bold text-white/70 transition hover:bg-white/10"
+                    >
+                      ↓ Download Now
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    
+                      href={absoluteUrl(status?.preview_download_url)}
+                      className="flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-sm font-black text-black shadow-[0_0_40px_rgba(255,255,255,0.15)] transition hover:scale-[1.02]"
+                    >
+                      ↓ Download Free Preview
+                    </a>
+                    <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/10 p-4 text-center">
+                      <p className="text-xs text-white/60">Want the full 30–38 page pack? <a href="/sign-up" className="font-bold text-indigo-400 hover:underline">Create a free account</a> to unlock premium generation.</p>
+                    </div>
+                  </>
                 )}
                 <button
                   onClick={resetToStart}
