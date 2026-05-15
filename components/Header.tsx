@@ -8,12 +8,18 @@ export default function Header() {
   const { isSignedIn } = useUser();
   const [credits, setCredits] = useState<number | null>(null);
 
-  useEffect(() => {
+  const fetchCredits = () => {
     if (!isSignedIn) return;
     fetch("/api/user/credits")
       .then((r) => r.json())
       .then((d) => setCredits(d.credits ?? 0))
       .catch(() => setCredits(0));
+  };
+
+  useEffect(() => {
+    fetchCredits();
+    window.addEventListener("credits-updated", fetchCredits);
+    return () => window.removeEventListener("credits-updated", fetchCredits);
   }, [isSignedIn]);
 
   return (
