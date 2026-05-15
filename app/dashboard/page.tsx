@@ -297,7 +297,7 @@ export default function DashboardPage() {
                             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 w-44 rounded-xl border border-white/10 bg-[#0d0f1e] p-2 shadow-xl">
                               <p className="mb-1.5 text-[10px] font-bold text-white/40">Week {w}{pack.title ? " — " + pack.title : ""}</p>
                               
-                                href={pack.master_pdf_path.startsWith("http") ? pack.master_pdf_path : "https://studypack-api.170.64.209.149.sslip.io" + pack.master_pdf_path}
+                                href={"https://studypack-api.170.64.209.149.sslip.io" + (pack.master_pdf_path || "")}
                                 className="block w-full rounded-lg bg-white px-3 py-1.5 text-center text-xs font-black text-black transition hover:scale-105"
                               >
                                 Download PDF
