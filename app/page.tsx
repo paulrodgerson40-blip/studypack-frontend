@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useUser, SignInButton } from "@clerk/nextjs";
+import { useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 
 const API_BASE =
@@ -194,8 +195,9 @@ function targetProgress(stage: StageKey, elapsed: number, backendPct: number): n
   return Math.max(2, Math.min(5, (elapsed / 8) * 5));
 }
 
-export default function Home() {
+function HomeInner() {
   const { isSignedIn } = useUser();
+  const searchParams = useSearchParams();
   const [subjects, setSubjects] = useState<{id: string, name: string, code: string, total_weeks: number, weekly_packs?: {week_number: number}[]}[]>([]);
   const [subjectsLoaded, setSubjectsLoaded] = useState(false);
   const [userCredits, setUserCredits] = useState<number | null>(null);
@@ -223,6 +225,17 @@ export default function Home() {
       .then(d => { setSubjects(d.subjects || []); setSubjectsLoaded(true); });
     fetch("/api/user/credits").then(r => r.json()).then(d => setUserCredits(d.credits ?? 0));
   }, [isSignedIn]);
+
+  // Pre-select subject/week from URL params (e.g. coming from dashboard Generate button)
+  useEffect(() => {
+    const paramSubject = searchParams.get("subject");
+    const paramWeek = searchParams.get("week");
+    if (paramSubject && subjectsLoaded) {
+      setSelectedSubject(paramSubject);
+      if (paramWeek) setSelectedWeek(paramWeek);
+    }
+  }, [subjectsLoaded, searchParams]);
+
   const startedAtRef = useRef<number | null>(null);
   const finalElapsedRef = useRef<number | null>(null);
 
@@ -1001,5 +1014,13 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
       </label>
       {children}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense>
+      <HomeInner />
+    </Suspense>
   );
 }
