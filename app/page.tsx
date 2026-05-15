@@ -1068,7 +1068,7 @@ function HomeInner() {
                   )}
                   <div className="mb-1 text-sm font-black text-white">{plan.name}</div>
                   <div className="mb-1 flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-white">${plan.price.toFixed(2)}</span>
+                    <span className="text-3xl font-black text-white">${(isUS ? plan.usd : plan.aud).toFixed(2)}</span>
                   </div>
                   <div className="mb-1 text-xs text-white/40">{plan.credits} credits · ${isUS ? plan.usdPer : plan.audPer}/pack {isUS ? "USD" : "AUD"}</div>
                   {plan.saving && <div className="mb-3 text-xs font-bold text-emerald-400">{plan.saving}</div>}
