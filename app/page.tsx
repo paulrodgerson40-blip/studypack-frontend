@@ -863,12 +863,14 @@ export default function Home() {
                 >
                   ↓ Download Premium StudyPack
                 </a>
-                <a
-                  href={absoluteUrl(status?.preview_download_url)}
-                  className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-6 py-4 text-sm font-bold text-white/70 transition hover:bg-white/10"
-                >
-                  ↓ Download Free Preview
-                </a>
+                {!isSignedIn && (
+                  <a
+                    href={absoluteUrl(status?.preview_download_url)}
+                    className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-6 py-4 text-sm font-bold text-white/70 transition hover:bg-white/10"
+                  >
+                    ↓ Download Free Preview
+                  </a>
+                )}
                 <button
                   onClick={resetToStart}
                   className="rounded-2xl border border-indigo-400/20 bg-indigo-400/8 px-6 py-4 text-sm font-bold text-indigo-200 transition hover:bg-indigo-400/12"
