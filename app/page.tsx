@@ -197,6 +197,7 @@ function targetProgress(stage: StageKey, elapsed: number, backendPct: number): n
 export default function Home() {
   const { isSignedIn } = useUser();
   const [subjects, setSubjects] = useState<{id: string, name: string, code: string, total_weeks: number}[]>([]);
+  const [subjectsLoaded, setSubjectsLoaded] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedWeek, setSelectedWeek] = useState("");
   const [packTitle, setPackTitle] = useState("");
@@ -218,7 +219,7 @@ export default function Home() {
     if (!isSignedIn) return;
     fetch("/api/subjects")
       .then(r => r.json())
-      .then(d => setSubjects(d.subjects || []));
+      .then(d => { setSubjects(d.subjects || []); setSubjectsLoaded(true); });
   }, [isSignedIn]);
   const startedAtRef = useRef<number | null>(null);
   const finalElapsedRef = useRef<number | null>(null);
@@ -483,15 +484,15 @@ export default function Home() {
                   </>
                 )}
 
-                {isSignedIn && subjects.length === 0 && (
-                  <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/10 p-4">
+                {isSignedIn && subjectsLoaded && subjects.length === 0 && (
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-sm font-semibold text-white/80">Add a subject in your Dashboard to save packs and track progress.</p>
                     <a href="/dashboard" className="mt-2 inline-block text-xs font-bold text-indigo-400 hover:underline">Go to Dashboard →</a>
                   </div>
                 )}
 
                 {!isSignedIn && (
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-sm text-white/50">Sign up free to save packs to subjects and unlock the Exam Pack system. Or generate a free 6-page preview below.</p>
                   </div>
                 )}
