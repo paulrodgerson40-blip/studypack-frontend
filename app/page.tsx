@@ -939,6 +939,18 @@ function HomeInner() {
           </div>
         )}
 
+
+        {/* FAQ */}
+        {!isSubmitting && !status && (
+          <div className="mx-auto mt-24 w-full max-w-3xl px-5 pb-24">
+            <div className="mb-10 text-center">
+              <h2 className="text-3xl font-black text-white">Frequently asked questions</h2>
+              <p className="mt-2 text-sm text-white/40">Everything you need to know before you start.</p>
+            </div>
+            <FAQSection />
+          </div>
+        )}
+
       </div>
 
       <style jsx global>{`
@@ -952,6 +964,76 @@ function HomeInner() {
         }
       `}</style>
     </main>
+  );
+}
+
+const FAQ_ITEMS = [
+  {
+    q: "What file types can I upload?",
+    a: "You can upload PDFs, Word documents (.docx), PowerPoint files (.pptx), and plain text files (.txt). Up to 4 files per generation, max 20MB total.",
+  },
+  {
+    q: "How many credits does it cost?",
+    a: "One weekly pack costs 1 credit. Language translations are 1 credit per language. Exam packs are free once you complete all weeks for a subject.",
+  },
+  {
+    q: "What\'s actually inside a weekly pack?",
+    a: "Each pack is a 30–38 page premium PDF with lecture hotspots, deep study notes, model answers, an attack sheet for exams, and a week summary. Tutor-quality, built from your actual content.",
+  },
+  {
+    q: "Can I use StudyPack for any university or subject?",
+    a: "Yes — it works with any university and any subject. Upload your lecture slides, transcripts, or notes and it builds the pack from your actual content.",
+  },
+  {
+    q: "What languages can I get my pack in?",
+    a: "We support Mandarin, Cantonese, Hindi, Arabic, Spanish, French, Portuguese, Japanese, Korean, Vietnamese, Indonesian and more. 1 credit per language.",
+  },
+  {
+    q: "Is my uploaded content private?",
+    a: "Yes. Your files are only used to generate your pack and are not shared with anyone or used to train any model. Your packs are private to your account.",
+  },
+  {
+    q: "What if my generation fails?",
+    a: "If a generation fails your credit is not deducted. You\'ll see an error message and can try again — usually a re-upload fixes it.",
+  },
+  {
+    q: "Can I share my pack with classmates?",
+    a: "Pack sharing is coming soon. You\'ll be able to share a read-only link — great for study groups.",
+  },
+];
+
+function FAQSection() {
+  const [open, setOpen] = React.useState<number | null>(null);
+  return (
+    <div className="space-y-2">
+      {FAQ_ITEMS.map((item, i) => (
+        <div
+          key={i}
+          className={[
+            "rounded-2xl border transition-all duration-200",
+            open === i
+              ? "border-indigo-400/30 bg-indigo-500/10"
+              : "border-white/8 bg-white/[0.03] hover:border-white/15",
+          ].join(" ")}
+        >
+          <button
+            onClick={() => setOpen(open === i ? null : i)}
+            className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left"
+          >
+            <span className="text-sm font-bold text-white">{item.q}</span>
+            <span className={[
+              "shrink-0 text-lg font-black transition-transform duration-200",
+              open === i ? "rotate-45 text-indigo-300" : "text-white/30",
+            ].join(" ")}>+</span>
+          </button>
+          {open === i && (
+            <div className="px-6 pb-5 text-sm leading-relaxed text-white/55">
+              {item.a}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 
