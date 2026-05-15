@@ -300,6 +300,20 @@ export default function Home() {
         finalElapsedRef.current = fe;
         setElapsed(fe);
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+        // Save pack to subject if subject was selected
+        if (data.status === "complete" && selectedSubject && selectedWeek) {
+          fetch("/api/packs/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              subject_id: selectedSubject,
+              week_number: selectedWeek,
+              title: packTitle || null,
+              job_id: jobId,
+              master_pdf_path: data.premium_download_url || null,
+            }),
+          }).catch(console.error);
+        }
       }
     } catch (e) { console.error(e); }
   }
