@@ -7,18 +7,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 // AUD prices (AU + rest of world)
 const AUD_PRICES: Record<string, string> = {
-  starter: "price_1TXHihH2DbjxeKGJbCpXCtBU",
-  plus:    "price_1TXHiiH2DbjxeKGJv8RgreZ6",
-  value:   "price_1TXHijH2DbjxeKGJT5PvWdv8",
-  pro:     "price_1TXHijH2DbjxeKGJQqKcfohZ",
+  starter: "price_1TXlk2HlgbUB5uP5Rjng4uVi",
+  plus:    "price_1TXlmeHlgbUB5uP5BGX1zxAS",
+  value:   "price_1TXlr8HlgbUB5uP5JaqLfAND",
+  pro:     "price_1TXlnMHlgbUB5uP54i9XaCBE",
 };
 
 // USD prices (US visitors only)
 const USD_PRICES: Record<string, string> = {
-  starter: "price_1TXHikH2DbjxeKGJRHMzDiGo",
-  plus:    "price_1TXHilH2DbjxeKGJQWTCFcKu",
-  value:   "price_1TXHilH2DbjxeKGJzxhQcP3o",
-  pro:     "price_1TXHimH2DbjxeKGJCJg1Vult",
+  starter: "price_1TXloMHlgbUB5uP5rXYknpja",
+  plus:    "price_1TXlp0HlgbUB5uP5PmaK5IfA",
+  value:   "price_1TXlpiHlgbUB5uP5rL4HAcr9",
+  pro:     "price_1TXlqOHlgbUB5uP5IGHs5nEm",
 };
 
 export async function POST(req: Request) {
