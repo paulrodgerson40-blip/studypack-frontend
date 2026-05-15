@@ -441,7 +441,6 @@ export default function Home() {
               </div>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
 
                 {isSignedIn && subjects.length > 0 && (
                   <>
