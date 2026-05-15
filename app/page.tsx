@@ -1065,34 +1065,17 @@ function HomeInner() {
 
         {/* ── SOCIAL PROOF ── */}
         {!isSubmitting && !status && (
-          <div className="mx-auto mt-28 w-full max-w-5xl px-5">
-            <p className="mb-10 text-center text-xs font-bold uppercase tracking-widest text-white/25">Used by students at leading universities worldwide</p>
-            <div className="grid grid-cols-3 gap-5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6">
+          <div className="mx-auto mt-28 w-full max-w-4xl px-5">
+            <p className="mb-8 text-center text-xs font-bold uppercase tracking-widest text-white/25">Used by students at leading universities worldwide</p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
               {[
-                { name: "University of Sydney", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/9/9c/University_of_Sydney_coat_of_arms.svg/120px-University_of_Sydney_coat_of_arms.svg.png" },
-                { name: "UNSW Sydney", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/b/b2/University_of_New_South_Wales_coat_of_arms.svg/120px-University_of_New_South_Wales_coat_of_arms.svg.png" },
-                { name: "Monash University", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Monash_University_logo.svg/240px-Monash_University_logo.svg.png" },
-                { name: "University of Melbourne", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/1/10/University_of_Melbourne_logo.svg/240px-University_of_Melbourne_logo.svg.png" },
-                { name: "ANU", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Australian_National_University_logo.svg/240px-Australian_National_University_logo.svg.png" },
-                { name: "UQ", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/b/b7/University_of_Queensland_logo.svg/240px-University_of_Queensland_logo.svg.png" },
-                { name: "Oxford", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Oxford-University-Circlet.svg/120px-Oxford-University-Circlet.svg.png" },
-                { name: "UCL", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/4/4f/UCL_coat_of_arms.svg/120px-UCL_coat_of_arms.svg.png" },
-                { name: "University of Toronto", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Utoronto_coa.svg/120px-Utoronto_coa.svg.png" },
-                { name: "NYU", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/2/20/New_York_University_Torch_Logo.svg/120px-New_York_University_Torch_Logo.svg.png" },
-                { name: "NUS", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/NUS_coat_of_arms.svg/120px-NUS_coat_of_arms.svg.png" },
-                { name: "UNE", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/9/94/University_of_New_England_%28Australia%29_Logo.svg/240px-University_of_New_England_%28Australia%29_Logo.svg.png" },
+                "University of Sydney", "UNSW", "Monash", "University of Melbourne",
+                "ANU", "UQ", "Oxford", "UCL", "University of Toronto",
+                "NYU", "NUS", "UNE", "Deakin", "UWA", "University of Auckland",
               ].map(u => (
-                <div key={u.name} className="group flex flex-col items-center gap-3 rounded-2xl border border-white/6 bg-white/[0.03] p-5 transition hover:border-white/15 hover:bg-white/[0.06]">
-                  <div className="flex h-14 w-14 items-center justify-center">
-                    <img
-                      src={u.logo}
-                      alt={u.name}
-                      className="max-h-14 w-auto object-contain opacity-60 grayscale transition group-hover:opacity-90 group-hover:grayscale-0"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                    />
-                  </div>
-                  <span className="text-center text-[10px] leading-tight text-white/30 group-hover:text-white/50">{u.name}</span>
-                </div>
+                <span key={u} className="rounded-full border border-white/10 bg-white/[0.04] px-5 py-2 text-xs font-semibold text-white/50 transition hover:border-white/25 hover:text-white/80">
+                  {u}
+                </span>
               ))}
             </div>
             <p className="mt-8 text-center text-xs text-white/20">+ any university worldwide — upload your content and it works</p>
