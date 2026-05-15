@@ -496,23 +496,7 @@ export default function Home() {
                   </div>
                 )}
 
-                <FormField label="Subject (optional)">
-                  <input
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="e.g. CRIM335 — auto-detected if blank"
-                    className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/22 focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition"
-                  />
-                </FormField>
 
-                <FormField label="Week (optional)">
-                  <input
-                    value={week}
-                    onChange={(e) => setWeek(e.target.value)}
-                    placeholder="e.g. Week 3 — auto-detected if blank"
-                    className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/22 focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/20 transition"
-                  />
-                </FormField>
 
                 <FormField label="Topic override (optional)">
                   <input
