@@ -181,19 +181,25 @@ async function batchTranslateObject(obj: unknown, targetLang: string): Promise<u
 
   if (strings.length === 0) return obj;
 
-  // Google Translate supports batching — send all at once
+  // Google Translate max 128 segments per request — chunk if needed
+  const CHUNK_SIZE = 100;
   const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY!;
-  const res = await fetch(
-    `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ q: strings, target: targetLang, format: "text" }),
-    }
-  );
-  if (!res.ok) throw new Error(`Translate API error: ${res.status} ${await res.text()}`);
-  const data = await res.json();
-  const translations: string[] = data.data.translations.map((t: { translatedText: string }) => t.translatedText);
+  const translations: string[] = [];
+
+  for (let i = 0; i < strings.length; i += CHUNK_SIZE) {
+    const chunk = strings.slice(i, i + CHUNK_SIZE);
+    const res = await fetch(
+      `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ q: chunk, target: targetLang, format: "text" }),
+      }
+    );
+    if (!res.ok) throw new Error(`Translate API error: ${res.status} ${await res.text()}`);
+    const data = await res.json();
+    translations.push(...data.data.translations.map((t: { translatedText: string }) => t.translatedText));
+  }
 
   // Deep-clone and apply translations
   function deepClone(node: unknown): unknown {
