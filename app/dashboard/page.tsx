@@ -59,6 +59,75 @@ function DashboardInner() {
   const [fbWouldPay, setFbWouldPay] = useState("");
   const [fbImprove, setFbImprove] = useState("");
 
+  // ── Translation state ──────────────────────────────────────────────────
+  const [translateModal, setTranslateModal] = useState<{
+    job_id: string;
+    pack_id: string;
+    week: number;
+    title: string;
+  } | null>(null);
+  const [translateLang, setTranslateLang] = useState("");
+  const [translating, setTranslating] = useState(false);
+  const [translateError, setTranslateError] = useState("");
+  const [translateDone, setTranslateDone] = useState<{
+    lang: string; language_name: string; json_url: string; pdf_url: string | null; cached: boolean;
+  } | null>(null);
+
+  const SUPPORTED_LANGUAGES: Record<string, string> = {
+    es: "🇪🇸 Spanish", fr: "🇫🇷 French", de: "🇩🇪 German",
+    it: "🇮🇹 Italian", pt: "🇵🇹 Portuguese", zh: "🇨🇳 Chinese",
+    ja: "🇯🇵 Japanese", ko: "🇰🇷 Korean", ar: "🇸🇦 Arabic",
+    hi: "🇮🇳 Hindi", ru: "🇷🇺 Russian", nl: "🇳🇱 Dutch",
+    pl: "🇵🇱 Polish", tr: "🇹🇷 Turkish", vi: "🇻🇳 Vietnamese",
+    id: "🇮🇩 Indonesian", th: "🇹🇭 Thai",
+  };
+
+  async function handleTranslate() {
+    if (!translateLang || !translateModal) return;
+    setTranslating(true);
+    setTranslateError("");
+    setTranslateDone(null);
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          job_id: translateModal.job_id,
+          pack_id: translateModal.pack_id,
+          lang: translateLang,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Translation failed");
+      setTranslateDone({
+        lang: data.lang,
+        language_name: data.language_name,
+        json_url: data.translated_json_url,
+        pdf_url: data.translated_pdf_url,
+        cached: data.cached,
+      });
+      // Refresh credits
+      fetch("/api/user/credits").then(r => r.json()).then(d => setUserCredits(d.credits ?? 0));
+    } catch (err: unknown) {
+      setTranslateError(err instanceof Error ? err.message : "Something went wrong");
+    }
+    setTranslating(false);
+  }
+
+  function openTranslateModal(pack: WeeklyPack, week: number) {
+    setTranslateModal({ job_id: pack.job_id!, pack_id: pack.id, week, title: pack.title });
+    setTranslateLang("");
+    setTranslateError("");
+    setTranslateDone(null);
+  }
+
+  function closeTranslateModal() {
+    setTranslateModal(null);
+    setTranslateDone(null);
+    setTranslateError("");
+    setTranslateLang("");
+  }
+
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.push("/");
   }, [isLoaded, isSignedIn, router]);
@@ -532,6 +601,17 @@ function DashboardInner() {
                                 <span className="text-[10px] text-white/20">No PDF</span>
                               )}
                             </div>
+                            {pack.job_id && (
+                              <button
+                                onClick={() => openTranslateModal(pack, w)}
+                                className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-2 py-1.5 text-[10px] font-bold text-indigo-300 transition hover:bg-indigo-500/20 active:scale-95"
+                              >
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <path d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/>
+                                </svg>
+                                + Language
+                              </button>
+                            )}
                           </div>
                         );
                       }
@@ -610,6 +690,120 @@ function DashboardInner() {
           </div>
         )}
       </div>
+      {/* ── Translation modal ── */}
+      {translateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-2xl border border-indigo-400/30 bg-[#0d0f1e] p-7 shadow-[0_0_60px_rgba(0,0,0,0.6)]">
+            {translateDone ? (
+              /* ── Success state ── */
+              <div className="text-center">
+                <div className="mb-3 text-4xl">🌐</div>
+                <h3 className="mb-1 text-lg font-black text-white">
+                  {translateDone.cached ? "Already translated!" : "Translation complete!"}
+                </h3>
+                <p className="mb-1 text-sm text-white/50">
+                  Week {translateModal.week} → <span className="font-bold text-indigo-300">{translateDone.language_name.replace(/^.+? /, "")}</span>
+                </p>
+                {!translateDone.cached && (
+                  <p className="mb-5 text-xs text-white/30">1 credit used</p>
+                )}
+                <div className="mb-5 flex flex-col gap-2">
+                  {translateDone.pdf_url && (
+                    <a
+                      href={translateDone.pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-black text-white transition hover:bg-indigo-400"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M5 1v5.5M2.5 4.5L5 7l2.5-2.5M1.5 8.5h7"/>
+                      </svg>
+                      Download Translated PDF
+                    </a>
+                  )}
+                  <a
+                    href={translateDone.json_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-sm font-bold text-white/60 transition hover:bg-white/5"
+                  >
+                    Download JSON data
+                  </a>
+                </div>
+                <button
+                  onClick={closeTranslateModal}
+                  className="w-full rounded-xl border border-white/10 py-2.5 text-sm font-bold text-white/40 transition hover:bg-white/5"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              /* ── Picker state ── */
+              <>
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-widest text-indigo-300/70 mb-1">🌐 Translate Pack</div>
+                    <h3 className="text-lg font-black text-white">Week {translateModal.week}</h3>
+                    <p className="text-xs text-white/40 line-clamp-1">{translateModal.title}</p>
+                  </div>
+                  <button onClick={closeTranslateModal} className="text-white/30 hover:text-white/70 text-2xl leading-none">×</button>
+                </div>
+
+                <p className="mb-4 text-xs text-white/40">
+                  Choose a language. Your pack.json will be translated and a new PDF rendered. <span className="text-amber-300 font-bold">1 credit</span> per translation (free if already translated).
+                </p>
+
+                {/* Language grid */}
+                <div className="mb-5 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
+                  {Object.entries(SUPPORTED_LANGUAGES).map(([code, label]) => (
+                    <button
+                      key={code}
+                      onClick={() => setTranslateLang(code)}
+                      className={`rounded-xl px-3 py-2.5 text-left text-xs font-bold transition ${
+                        translateLang === code
+                          ? "bg-indigo-500 text-white"
+                          : "border border-white/10 text-white/50 hover:bg-white/5"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {translateError && (
+                  <p className="mb-3 rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-400">
+                    {translateError}
+                  </p>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={closeTranslateModal}
+                    className="rounded-xl border border-white/10 px-4 py-3 text-sm font-bold text-white/40 transition hover:bg-white/5"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleTranslate}
+                    disabled={!translateLang || translating}
+                    className="flex-1 rounded-xl bg-indigo-500 py-3 text-sm font-black text-white transition hover:bg-indigo-400 disabled:opacity-40"
+                  >
+                    {translating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                          <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                        </svg>
+                        Translating…
+                      </span>
+                    ) : "Translate → 1 credit"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <footer className="relative border-t border-white/8 px-5 py-8 md:px-10 mt-12">
         <div className="mx-auto max-w-5xl flex flex-col items-center justify-between gap-4 text-xs text-white/25 md:flex-row">
