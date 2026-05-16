@@ -86,7 +86,7 @@ const stagePlan: Array<{
 
 const aiInsights = [
   "Writing assessment hotspots from your lecture...",
-  "Building tutor-grade explanations, not summaries...",
+  "Building tutor grade explanations, not summaries...",
   "Crafting model answers from your material...",
   "Identifying the traps students fall into...",
   "Writing HD insights and rapid recall triggers...",
@@ -490,7 +490,7 @@ function HomeInner() {
               </h1>
 
               <p className="mt-6 max-w-lg text-lg leading-8 text-white/50">
-                Upload your weekly lecture material. Get a premium tutor-style StudyPack — hotspots, deep notes, model answers, attack sheet and more.
+                Upload your weekly lecture material. Get a premium StudyPack — hotspots, deep notes, model answers, attack sheet and more.
               </p>
 
               <div className="mt-10 space-y-3">
@@ -699,7 +699,7 @@ function HomeInner() {
                 </p>
                 <div className="rounded-xl border border-indigo-400/15 bg-indigo-400/8 px-4 py-3 text-center">
                   <p className="text-xs leading-5 text-indigo-200/70">
-                    ✦ Most StudyPacks are ready in <span className="font-bold text-indigo-200">2–4 minutes</span> — a complete elite study system built from your lecture, not a generic summary.
+                    ✦ Most StudyPacks are ready in <span className="font-bold text-indigo-200">2–4 minutes</span> — a complete study system built from your lecture, not a generic summary.
                   </p>
                 </div>
               </form>
@@ -904,7 +904,7 @@ function HomeInner() {
                 Generated in <span className="font-bold text-white">{formatElapsed(elapsed)}</span>
               </p>
               <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-indigo-300/80">
-                Your elite study system is ready — tutor-grade notes, assessment hotspots, model answers and a complete revision system, all built from your lecture material.
+                Your StudyPack is ready — tutor grade notes, assessment hotspots, model answers and a complete revision system, all built from your lecture material.
               </p>
 
               {/* Section summary */}
@@ -994,12 +994,12 @@ function HomeInner() {
                 Simple three-step process
               </div>
               <h2 className="text-3xl font-black text-white md:text-4xl">How it works</h2>
-              <p className="mt-3 text-sm text-white/40">From lecture notes to exam-ready in under 4 minutes.</p>
+              <p className="mt-3 text-sm text-white/40">From lecture notes to exam ready in under 4 minutes.</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-3">
               {[
                 { step: "01", icon: "↑", title: "Upload your material", body: "Drop in your weekly lecture transcript and slides — PDF, DOCX, PPTX or TXT. Up to 4 files, any university, any subject." },
-                { step: "02", icon: "⚡", title: "AI builds your pack", body: "Our system reads your actual content and writes a tutor-quality 30–38 page StudyPack in 2–4 minutes. No generic summaries." },
+                { step: "02", icon: "⚡", title: "AI builds your pack", body: "Our system reads your actual content and writes a 30–38 page premium StudyPack in 2–4 minutes. No generic summaries." },
                 { step: "03", icon: "✓", title: "Study smarter", body: "Download your premium PDF. Hotspots, model answers, attack sheet — everything you need to ace your assessments." },
               ].map((s) => (
                 <div key={s.step} className="relative rounded-2xl border border-white/8 bg-white/[0.03] p-7">
@@ -1155,7 +1155,7 @@ function HomeInner() {
                   <span className="text-sm font-black text-white">STUDYPACK.AI</span>
                 </div>
                 <p className="mt-2 max-w-xs text-xs leading-relaxed text-white/35">
-                  Premium AI study packs built from your actual lecture material. Not summaries — tutor-quality content.
+                  Premium study packs built from your actual lecture material. Not summaries — real tutor quality.
                 </p>
               </div>
               <div className="flex flex-wrap gap-10 text-xs text-white/40">
@@ -1174,7 +1174,7 @@ function HomeInner() {
             </div>
             <div className="flex flex-col items-center justify-between gap-3 border-t border-white/8 pt-6 text-xs text-white/25 md:flex-row">
               <span>© 2026 StudyPack.ai · All rights reserved</span>
-              <span>Made for students, by people who hated bad study tools.</span>
+              <span>Built for students who want to study smarter, not harder.</span>
             </div>
           </div>
         </footer>
@@ -1261,7 +1261,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What languages can I get my pack in?",
-    a: "We support Mandarin, Cantonese, Hindi, Arabic, Spanish, French, Portuguese, Japanese, Korean, Vietnamese, Indonesian and more. 1 credit per language.",
+    a: "We support Chinese (Simplified), Hindi, Arabic, Spanish, French, Portuguese, Japanese, Korean, Vietnamese, Indonesian, German, Italian and more — 17 languages in total. 1 credit per language.",
   },
   {
     q: "Is my uploaded content private?",
