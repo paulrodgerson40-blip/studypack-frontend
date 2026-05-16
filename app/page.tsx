@@ -339,7 +339,12 @@ function HomeInner() {
       const sms = getStatusStartMs(data);
       if (sms && !startedAtRef.current) startedAtRef.current = sms;
       setStatus(data);
-      if (data.status === "failed") setError(extractFriendlyError(data, "Generation failed."));
+      if (data.status === "failed") {
+        setError(extractFriendlyError(data, "Generation failed."));
+        // Refund the credit automatically
+        fetch("/api/user/refund-credit", { method: "POST" }).catch(console.error);
+        fetch("/api/user/credits").then(r => r.json()).then(d => setUserCredits(d.credits ?? 0));
+      }
       if (data.status === "complete" || data.status === "failed") {
         const endMs = getStatusEndMs(data) || Date.now();
         const fe = elapsedSecondsFrom(startedAtRef.current || sms || endMs, endMs);
@@ -1264,7 +1269,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What if my generation fails?",
-    a: "If a generation fails your credit is not deducted. You\'ll see an error message and can try again — usually a re-upload fixes it.",
+    a: "If a generation fails your credit is automatically refunded. You\'ll see an error message and can try again straight away — usually a re-upload fixes it.",
   },
   {
     q: "Can I share my pack with classmates?",
