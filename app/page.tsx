@@ -911,22 +911,7 @@ function HomeInner() {
                 Your StudyPack is ready — tutor grade notes, assessment hotspots, model answers and a complete revision system, all built from your lecture material.
               </p>
 
-              {/* Section summary */}
-              {detected && (
-                <div className="mx-auto mt-6 grid max-w-sm grid-cols-2 gap-3">
-                  {[
-                    { label: "Assessment hotspots", val: detected.assessment_hotspots },
-                    { label: "Tutor notes", val: detected.expanded_notes },
-                    { label: "Quiz checks", val: detected.quiz_checks },
-                    { label: "Model answers", val: detected.practice_questions },
-                  ].filter(x => x.val).map(({ label, val }) => (
-                    <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.05] p-4">
-                      <div className="text-2xl font-black text-white">{val}</div>
-                      <div className="mt-0.5 text-xs text-white/40">{label}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
+
 
               {/* Downloads */}
               <div className="mx-auto mt-8 grid max-w-sm gap-3">
