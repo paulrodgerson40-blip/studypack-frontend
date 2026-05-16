@@ -429,6 +429,9 @@ function HomeInner() {
 
       const res = await fetch(`${API_BASE}/api/studypack/generate`, { method: "POST", body: fd });
       const data = await res.json().catch(() => null);
+      if (res.status === 429) {
+        throw new Error(data?.message || "You've used your 2 free previews for today. Create a free account for unlimited access.");
+      }
       if (!res.ok) throw new Error(extractFriendlyError(data, "This upload could not be processed."));
 
       const sms = getStatusStartMs(data);
