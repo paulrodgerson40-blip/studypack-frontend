@@ -938,6 +938,7 @@ function HomeInner() {
                     >
                       ↓ Download Free Preview
                     </a>
+                    <p className="text-center text-[11px] text-white/30">Free preview is English only. Sign up to translate into 17 languages.</p>
                     <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/10 p-4 text-center">
                       <p className="text-xs text-white/60">Want the full 30–38 page pack? <a href="/sign-up" className="font-bold text-indigo-400 hover:underline">Create a free account</a> to unlock premium generation.</p>
                     </div>
@@ -1118,6 +1119,37 @@ function HomeInner() {
           </div>
         )}
 
+
+        {/* Language showcase */}
+        {!isSubmitting && !status && (
+          <div className="mx-auto mt-24 w-full max-w-4xl px-5">
+            <div className="relative overflow-hidden rounded-3xl border border-indigo-400/20 bg-gradient-to-br from-indigo-500/10 via-violet-500/5 to-cyan-500/10 p-10 text-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
+              <div className="relative">
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-bold text-indigo-300 uppercase tracking-widest">
+                  🌐 17 Languages
+                </div>
+                <h2 className="mt-2 text-3xl font-black text-white">Your pack. Any language.</h2>
+                <p className="mx-auto mt-3 max-w-xl text-sm text-white/50 leading-relaxed">
+                  Every StudyPack can be translated into 17 languages with one click — full PDF rendered in your language, same tutor quality, same structure. Perfect for international students or studying in your native language.
+                </p>
+                <div className="mt-8 flex flex-wrap justify-center gap-2">
+                  {[
+                    "🇪🇸 Spanish","🇫🇷 French","🇩🇪 German","🇮🇹 Italian","🇵🇹 Portuguese",
+                    "🇨🇳 Chinese","🇯🇵 Japanese","🇰🇷 Korean","🇸🇦 Arabic","🇮🇳 Hindi",
+                    "🇷🇺 Russian","🇳🇱 Dutch","🇵🇱 Polish","🇹🇷 Turkish","🇻🇳 Vietnamese",
+                    "🇮🇩 Indonesian","🇹🇭 Thai"
+                  ].map(lang => (
+                    <span key={lang} className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-bold text-white/70">
+                      {lang}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-6 text-xs text-white/30">1 credit per translation · Free to re-download · English preview only — sign up to translate</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* FAQ */}
         {!isSubmitting && !status && (
