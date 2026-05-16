@@ -94,16 +94,21 @@ async function buildAwsAuth(
 
 async function fetchFromSpaces(key: string): Promise<string> {
   const path = `/${key}`;
+  const url = `${SPACES_BASE_URL}${path}`;
   const headers = await buildAwsAuth("GET", path, "", "application/json");
-  const res = await fetch(`${SPACES_ENDPOINT}/${SPACES_BUCKET}${path}`, { headers });
-  if (!res.ok) throw new Error(`Spaces fetch failed: ${res.status} ${res.statusText}`);
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Spaces fetch failed: ${res.status} ${res.statusText} — ${body.slice(0, 200)}`);
+  }
   return res.text();
 }
 
 async function uploadToSpaces(key: string, body: string, contentType = "application/json"): Promise<void> {
   const path = `/${key}`;
+  const url = `${SPACES_BASE_URL}${path}`;
   const headers = await buildAwsAuth("PUT", path, body, contentType);
-  const res = await fetch(`${SPACES_ENDPOINT}/${SPACES_BUCKET}${path}`, {
+  const res = await fetch(url, {
     method: "PUT",
     headers: { ...headers, "x-amz-acl": "public-read" },
     body,
@@ -379,7 +384,7 @@ export async function POST(req: Request) {
       credits_remaining: profile.credits - 1,
     });
   } catch (err) {
-    console.error("Translation error:", err);
+    console.error("Translation error:", err instanceof Error ? err.message : err);
 
     // Mark translation as failed and refund the credit
     await supabaseAdmin
