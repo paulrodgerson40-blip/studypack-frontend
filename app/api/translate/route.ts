@@ -31,9 +31,9 @@ const SPACES_ENDPOINT = "https://syd1.digitaloceanspaces.com";
 const SPACES_BUCKET = "studypack-storage";
 const SPACES_BASE_URL = `https://${SPACES_BUCKET}.syd1.digitaloceanspaces.com`;
 
-async function hmacSha256(key: ArrayBuffer, data: string): Promise<ArrayBuffer> {
+async function hmacSha256(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
   const cryptoKey = await crypto.subtle.importKey(
-    "raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    "raw", key instanceof Uint8Array ? key.buffer : key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
   return crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(data));
 }
