@@ -937,6 +937,12 @@ function HomeInner() {
                   <>
                     <a
                       href={absoluteUrl(status?.preview_download_url)}
+                      onClick={() => {
+                        // Clean up premium PDF from Spaces — anonymous user only gets preview
+                        if (status?.job_id) {
+                          fetch(`/api/studypack/cleanup/${status.job_id}`, { method: "DELETE" }).catch(() => {});
+                        }
+                      }}
                       className="flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-sm font-black text-black shadow-[0_0_40px_rgba(255,255,255,0.15)] transition hover:scale-[1.02]"
                     >
                       ↓ Download Free Preview
