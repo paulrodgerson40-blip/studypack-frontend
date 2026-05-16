@@ -19,6 +19,15 @@ type WeeklyPack = {
   job_id: string | null;
 };
 
+type Translation = {
+  id: string;
+  target_language: string;
+  language_name: string;
+  status: string;
+  translated_json_url: string | null;
+  translated_pdf_url: string | null;
+};
+
 type Subject = {
   id: string;
   name: string;
@@ -73,6 +82,9 @@ function DashboardInner() {
     lang: string; language_name: string; json_url: string; pdf_url: string | null; cached: boolean;
   } | null>(null);
 
+  // job_id -> list of completed translations
+  const [packTranslations, setPackTranslations] = useState<Record<string, Translation[]>>({});
+
   const SUPPORTED_LANGUAGES: Record<string, string> = {
     es: "🇪🇸 Spanish", fr: "🇫🇷 French", de: "🇩🇪 German",
     it: "🇮🇹 Italian", pt: "🇵🇹 Portuguese", zh: "🇨🇳 Chinese",
@@ -106,8 +118,9 @@ function DashboardInner() {
         pdf_url: data.translated_pdf_url,
         cached: data.cached,
       });
-      // Refresh credits
+      // Refresh credits + translations for this pack
       fetch("/api/user/credits").then(r => r.json()).then(d => setUserCredits(d.credits ?? 0));
+      if (translateModal) fetchTranslationsForJob(translateModal.job_id);
     } catch (err: unknown) {
       setTranslateError(err instanceof Error ? err.message : "Something went wrong");
     }
@@ -126,6 +139,19 @@ function DashboardInner() {
     setTranslateDone(null);
     setTranslateError("");
     setTranslateLang("");
+  }
+
+  async function fetchTranslationsForJob(job_id: string) {
+    const res = await fetch(`/api/translate?job_id=${job_id}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const completed = (data.translations || []).filter((t: Translation) => t.status === "complete");
+    setPackTranslations(prev => ({ ...prev, [job_id]: completed }));
+  }
+
+  async function fetchAllTranslations(packs: { job_id: string | null }[]) {
+    const jobIds = packs.map(p => p.job_id).filter(Boolean) as string[];
+    await Promise.all(jobIds.map(fetchTranslationsForJob));
   }
 
   useEffect(() => {
@@ -162,6 +188,9 @@ function DashboardInner() {
     setSubjects(subs);
     if (subs.length === 0) setShowWelcome(true);
     setLoading(false);
+    // Fetch existing translations for all completed packs
+    const allPacks = subs.flatMap((s: Subject) => s.weekly_packs || []);
+    await fetchAllTranslations(allPacks);
   }
 
   async function createSubject(e: React.FormEvent) {
@@ -602,13 +631,40 @@ function DashboardInner() {
                               )}
                             </div>
                             {pack.job_id && (
-                              <button
-                                onClick={() => openTranslateModal(pack, w)}
-                                className="mt-2 flex w-full flex-col items-center justify-center rounded-lg border border-violet-400/40 bg-gradient-to-r from-violet-500/20 to-indigo-500/20 px-2 py-2 text-center transition hover:from-violet-500/30 hover:to-indigo-500/30 hover:border-violet-400/60 active:scale-95"
-                              >
-                                <span className="text-[10px] font-black text-violet-300">🌐 Translate Pack</span>
-                                <span className="text-[9px] text-violet-300/60 leading-tight">17 languages · 1 credit</span>
-                              </button>
+                              <div className="mt-2 flex flex-col gap-1">
+                                {/* Existing translations */}
+                                {(packTranslations[pack.job_id] || []).map(t => (
+                                  <div key={t.id} className="flex items-center justify-between rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-2 py-1.5">
+                                    <span className="text-[9px] font-bold text-emerald-300 truncate">{t.language_name}</span>
+                                    <div className="flex gap-1 shrink-0">
+                                      {t.translated_pdf_url && (
+                                        <a href={t.translated_pdf_url} target="_blank" rel="noopener noreferrer"
+                                          className="rounded px-1.5 py-0.5 text-[9px] font-black bg-emerald-500/30 text-emerald-300 hover:bg-emerald-500/50 transition">
+                                          PDF
+                                        </a>
+                                      )}
+                                      {t.translated_json_url && (
+                                        <a href={t.translated_json_url} target="_blank" rel="noopener noreferrer"
+                                          className="rounded px-1.5 py-0.5 text-[9px] font-bold border border-white/10 text-white/40 hover:bg-white/5 transition">
+                                          JSON
+                                        </a>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                                {/* Translate button */}
+                                <button
+                                  onClick={() => openTranslateModal(pack, w)}
+                                  className="flex w-full flex-col items-center justify-center rounded-lg border border-violet-400/40 bg-gradient-to-r from-violet-500/20 to-indigo-500/20 px-2 py-2 text-center transition hover:from-violet-500/30 hover:to-indigo-500/30 hover:border-violet-400/60 active:scale-95"
+                                >
+                                  <span className="text-[10px] font-black text-violet-300">🌐 Translate Pack</span>
+                                  <span className="text-[9px] text-violet-300/60 leading-tight">
+                                    {(packTranslations[pack.job_id] || []).length > 0
+                                      ? `+ another language · 1 credit`
+                                      : `17 languages · 1 credit`}
+                                  </span>
+                                </button>
+                              </div>
                             )}
                           </div>
                         );
