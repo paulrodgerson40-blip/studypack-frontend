@@ -383,6 +383,10 @@ function HomeInner() {
 
     // Auto-detect subject/week from first filename if user left them blank
     // Use selected subject name+code and week number for clean filenames
+    runGeneration();
+  }
+
+  async function runGeneration() {
     const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
     const resolvedSubject = selectedSubjectData
       ? (selectedSubjectData.code ? selectedSubjectData.code : selectedSubjectData.name)
@@ -1215,8 +1219,8 @@ function HomeInner() {
                   onClick={() => {
                     setShowConfirm(false);
                     setPendingSubmit(true);
-                    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-                    handleSubmit(fakeEvent);
+                    // Call runGeneration directly — avoids modal re-trigger from stale pendingSubmit state
+                    runGeneration();
                   }}
                   className="flex-1 rounded-xl bg-indigo-500 py-3 text-sm font-black text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] transition hover:bg-indigo-400 active:scale-95"
                 >
