@@ -30,7 +30,7 @@ export async function GET(
       .single();
 
     if (pack) {
-      const subject = pack.subjects as Record<string, unknown> | null;
+      const subject = (pack.subjects as unknown) as Record<string, unknown> | null;
       const code = subject?.code ? String(subject.code) : null;
       const name = subject?.name ? String(subject.name).replace(/\s+/g, "_").slice(0, 30) : null;
       const subjectPart = code || name || "Subject";
