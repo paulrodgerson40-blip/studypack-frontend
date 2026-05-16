@@ -259,6 +259,21 @@ export async function POST(req: Request) {
   if (!profile) return NextResponse.json({ error: "User not found" }, { status: 404 });
   if (profile.credits < 1) return NextResponse.json({ error: "Insufficient credits" }, { status: 402 });
 
+  // ── Rate limiting: max 10 translations per hour per user ───────────────
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count: recentCount } = await supabaseAdmin
+    .from("translations")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", profile.id)
+    .gte("created_at", oneHourAgo);
+
+  if ((recentCount ?? 0) >= 10) {
+    return NextResponse.json(
+      { error: "Too many translations — maximum 10 per hour. Please try again later." },
+      { status: 429 }
+    );
+  }
+
   // ── Check for existing cached translation ───────────────────────────────
   const { data: existing } = await supabaseAdmin
     .from("translations")
