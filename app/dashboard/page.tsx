@@ -79,7 +79,7 @@ function DashboardInner() {
   const [translating, setTranslating] = useState(false);
   const [translateError, setTranslateError] = useState("");
   const [translateDone, setTranslateDone] = useState<{
-    lang: string; language_name: string; json_url: string; pdf_url: string | null; cached: boolean;
+    lang: string; language_name: string; pdf_url: string | null; cached: boolean;
   } | null>(null);
 
   // job_id -> list of completed translations
@@ -147,7 +147,6 @@ function DashboardInner() {
       setTranslateDone({
         lang: data.lang,
         language_name: data.language_name,
-        json_url: data.translated_json_url,
         pdf_url: data.translated_pdf_url,
         cached: data.cached,
       });
@@ -675,20 +674,14 @@ function DashboardInner() {
                                 {(packTranslations[pack.job_id] || []).map(t => (
                                   <div key={t.id} className="flex items-center justify-between rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-2 py-1.5">
                                     <span className="text-[9px] font-bold text-emerald-300 truncate">{t.language_name}</span>
-                                    <div className="flex gap-1 shrink-0">
-                                      {t.translated_pdf_url && (
-                                        <a href={t.translated_pdf_url} target="_blank" rel="noopener noreferrer"
-                                          className="rounded px-1.5 py-0.5 text-[9px] font-black bg-emerald-500/30 text-emerald-300 hover:bg-emerald-500/50 transition">
-                                          PDF
-                                        </a>
-                                      )}
-                                      {t.translated_json_url && (
-                                        <a href={t.translated_json_url} target="_blank" rel="noopener noreferrer"
-                                          className="rounded px-1.5 py-0.5 text-[9px] font-bold border border-white/10 text-white/40 hover:bg-white/5 transition">
-                                          JSON
-                                        </a>
-                                      )}
-                                    </div>
+                                    {t.translated_pdf_url ? (
+                                      <a href={t.translated_pdf_url} target="_blank" rel="noopener noreferrer"
+                                        className="rounded px-1.5 py-0.5 text-[9px] font-black bg-emerald-500/30 text-emerald-300 hover:bg-emerald-500/50 transition shrink-0">
+                                        ↓ PDF
+                                      </a>
+                                    ) : (
+                                      <span className="text-[9px] text-amber-300/60 shrink-0">rendering…</span>
+                                    )}
                                   </div>
                                 ))}
                                 {/* Translate button */}
@@ -853,7 +846,7 @@ function DashboardInner() {
                   <p className="mb-5 text-xs text-white/30">1 credit used</p>
                 )}
                 <div className="mb-5 flex flex-col gap-2">
-                  {translateDone.pdf_url && (
+                  {translateDone.pdf_url ? (
                     <a
                       href={translateDone.pdf_url}
                       target="_blank"
@@ -865,15 +858,11 @@ function DashboardInner() {
                       </svg>
                       Download Translated PDF
                     </a>
+                  ) : (
+                    <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-center text-xs text-amber-300">
+                      ⏳ PDF is rendering — check back in a minute and re-open this pack.
+                    </div>
                   )}
-                  <a
-                    href={translateDone.json_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-sm font-bold text-white/60 transition hover:bg-white/5"
-                  >
-                    Download JSON data
-                  </a>
                 </div>
                 <button
                   onClick={closeTranslateModal}
