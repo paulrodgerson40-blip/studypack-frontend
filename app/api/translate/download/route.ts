@@ -80,10 +80,10 @@ export async function GET(req: Request) {
 
   if (!profile) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  // Verify this translation belongs to the user
+  // Verify this translation belongs to the user, join pack + subject for filename
   const { data: translation } = await supabaseAdmin
     .from("translations")
-    .select("translated_pdf_path, language_name, job_id")
+    .select("translated_pdf_path, language_name, job_id, pack_id, weekly_packs(week_number, subject_id, subjects(name, code))")
     .eq("id", translationId)
     .eq("user_id", profile.id)
     .eq("status", "complete")
@@ -100,8 +100,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Failed to fetch PDF" }, { status: 502 });
   }
 
+  // Build filename matching the English PDF convention: StudyPack-Subject_WeekN-Language.pdf
+  const pack = (translation as Record<string, unknown>).weekly_packs as Record<string, unknown> | null;
+  const subject = pack ? (pack.subjects as Record<string, unknown> | null) : null;
+  const subjectName = subject?.code
+    ? String(subject.code)
+    : subject?.name
+    ? String(subject.name).replace(/\s+/g, "_").slice(0, 30)
+    : "Subject";
+  const weekNum = pack?.week_number ? `Week${pack.week_number}` : translation.job_id;
   const langSlug = translation.language_name.replace(/[^a-zA-Z]/g, "");
-  const filename = `StudyPack-${langSlug}-${translation.job_id}.pdf`;
+  const filename = `StudyPack-${subjectName}_${weekNum}-Premium-${langSlug}.pdf`;
 
   return new Response(pdfRes.body, {
     status: 200,
