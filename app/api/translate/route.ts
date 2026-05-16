@@ -287,21 +287,24 @@ export async function POST(req: Request) {
     description: `Translation to ${SUPPORTED_LANGUAGES[lang]} for job ${job_id}`,
   });
 
-  // ── Create translation record (processing) ──────────────────────────────
+  // ── Upsert translation record (handles stuck/failed records from prior attempts) ──
   const { data: translationRow, error: insertErr } = await supabaseAdmin
     .from("translations")
-    .insert({
+    .upsert({
       user_id: profile.id,
       job_id,
       pack_id: pack_id ?? null,
       target_language: lang,
       language_name: SUPPORTED_LANGUAGES[lang],
       status: "processing",
-    })
+      translated_json_path: null,
+      translated_pdf_path: null,
+    }, { onConflict: "user_id,job_id,target_language" })
     .select("id")
     .single();
 
   if (insertErr || !translationRow) {
+    console.error("Translation record upsert error:", JSON.stringify(insertErr));
     return NextResponse.json({ error: "Failed to create translation record" }, { status: 500 });
   }
 
