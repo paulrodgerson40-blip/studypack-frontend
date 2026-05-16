@@ -854,6 +854,7 @@ function DashboardInner() {
                     <a
                       href={`/api/translate/download?id=${translateDone.translation_id}`}
                       download
+                      onClick={() => setTimeout(closeTranslateModal, 500)}
                       className="flex items-center justify-center gap-2 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-black text-white transition hover:bg-indigo-400"
                     >
                       <svg width="14" height="14" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
