@@ -78,7 +78,7 @@ function DashboardInner() {
   const [translating, setTranslating] = useState(false);
   const [translateError, setTranslateError] = useState("");
   const [translateDone, setTranslateDone] = useState<{
-    lang: string; language_name: string; pdf_url: string | null; cached: boolean;
+    lang: string; language_name: string; translation_id: string | null; cached: boolean;
   } | null>(null);
 
   // job_id -> list of completed translations
@@ -146,7 +146,7 @@ function DashboardInner() {
       setTranslateDone({
         lang: data.lang,
         language_name: data.language_name,
-        pdf_url: data.translated_pdf_url,
+        translation_id: data.translation_id ?? null,
         cached: data.cached,
       });
       // Refresh credits + translations for this pack
@@ -679,7 +679,7 @@ function DashboardInner() {
                                   <div key={t.id} className="flex items-center justify-between rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-2 py-1.5">
                                     <span className="text-[9px] font-bold text-emerald-300 truncate">{t.language_name}</span>
                                     {t.translated_pdf_url ? (
-                                      <a href={t.translated_pdf_url} target="_blank" rel="noopener noreferrer"
+                                      <a href={`/api/translate/download?id=${t.id}`} download
                                         className="rounded px-1.5 py-0.5 text-[9px] font-black bg-emerald-500/30 text-emerald-300 hover:bg-emerald-500/50 transition shrink-0">
                                         ↓ PDF
                                       </a>
@@ -850,11 +850,10 @@ function DashboardInner() {
                   <p className="mb-5 text-xs text-white/30">1 credit used</p>
                 )}
                 <div className="mb-5 flex flex-col gap-2">
-                  {translateDone.pdf_url ? (
+                  {translateDone.translation_id ? (
                     <a
-                      href={translateDone.pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={`/api/translate/download?id=${translateDone.translation_id}`}
+                      download
                       className="flex items-center justify-center gap-2 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-black text-white transition hover:bg-indigo-400"
                     >
                       <svg width="14" height="14" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

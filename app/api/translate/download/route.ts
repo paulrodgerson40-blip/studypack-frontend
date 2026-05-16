@@ -93,7 +93,21 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Translation not found" }, { status: 404 });
   }
 
-  // Generate signed URL and redirect
+  // Fetch PDF from Spaces and stream back with download headers
   const signedUrl = await getSignedUrl(translation.translated_pdf_path);
-  return NextResponse.redirect(signedUrl);
+  const pdfRes = await fetch(signedUrl);
+  if (!pdfRes.ok) {
+    return NextResponse.json({ error: "Failed to fetch PDF" }, { status: 502 });
+  }
+
+  const langSlug = translation.language_name.replace(/[^a-zA-Z]/g, "");
+  const filename = `StudyPack-${langSlug}-${translation.job_id}.pdf`;
+
+  return new Response(pdfRes.body, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
 }
