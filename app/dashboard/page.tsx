@@ -473,7 +473,7 @@ function DashboardInner() {
                 { label: "Subject Name *", key: "name", placeholder: "Equity & Trusts", required: true },
                 { label: "Subject Code", key: "code", placeholder: "LAW340" },
                 { label: "University", key: "university", placeholder: "University of Sydney" },
-                { label: "Semester", key: "semester", placeholder: "Semester 1, 2025" },
+                { label: "Study Period", key: "semester", placeholder: "Trimester 3, 2026" },
               ].map(({ label, key, placeholder, required }) => (
                 <div key={key}>
                   <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-white/30">{label}</label>
