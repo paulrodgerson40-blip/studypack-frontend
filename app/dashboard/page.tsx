@@ -85,6 +85,39 @@ function DashboardInner() {
   // job_id -> list of completed translations
   const [packTranslations, setPackTranslations] = useState<Record<string, Translation[]>>({});
 
+  // Edit weeks modal
+  const [editWeeksModal, setEditWeeksModal] = useState<{ subjectId: string; name: string; currentTotal: number; completedCount: number } | null>(null);
+  const [editWeeksValue, setEditWeeksValue] = useState("");
+  const [editWeeksSaving, setEditWeeksSaving] = useState(false);
+  const [editWeeksError, setEditWeeksError] = useState("");
+
+  async function saveEditWeeks() {
+    if (!editWeeksModal) return;
+    const newTotal = parseInt(editWeeksValue);
+    if (isNaN(newTotal) || newTotal < 1) { setEditWeeksError("Please enter a valid number."); return; }
+    if (newTotal < editWeeksModal.completedCount) {
+      setEditWeeksError(`Can't go below ${editWeeksModal.completedCount} — you already have ${editWeeksModal.completedCount} completed packs.`);
+      return;
+    }
+    if (newTotal === editWeeksModal.currentTotal) { setEditWeeksModal(null); return; }
+    setEditWeeksSaving(true);
+    setEditWeeksError("");
+    try {
+      const res = await fetch(`/api/subjects/${editWeeksModal.subjectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ total_weeks: newTotal }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update");
+      setEditWeeksModal(null);
+      fetchSubjects();
+    } catch (err: unknown) {
+      setEditWeeksError(err instanceof Error ? err.message : "Something went wrong");
+    }
+    setEditWeeksSaving(false);
+  }
+
   const SUPPORTED_LANGUAGES: Record<string, string> = {
     es: "🇪🇸 Spanish", fr: "🇫🇷 French", de: "🇩🇪 German",
     it: "🇮🇹 Italian", pt: "🇵🇹 Portuguese", zh: "🇨🇳 Chinese",
@@ -572,6 +605,12 @@ function DashboardInner() {
                     <div className="shrink-0 text-right">
                       <div className="text-2xl font-black text-emerald-400">{progress}%</div>
                       <div className="text-xs text-white/30">{packs.length}/{totalWeeks} weeks</div>
+                      <button
+                        onClick={() => { setEditWeeksModal({ subjectId: subject.id, name: subject.name, currentTotal: totalWeeks, completedCount: packs.length }); setEditWeeksValue(String(totalWeeks)); setEditWeeksError(""); }}
+                        className="mt-1 text-[10px] text-white/20 hover:text-white/50 transition underline underline-offset-2"
+                      >
+                        edit weeks
+                      </button>
                     </div>
                   </div>
 
@@ -744,6 +783,58 @@ function DashboardInner() {
           </div>
         )}
       </div>
+      {/* ── Edit weeks modal ── */}
+      {editWeeksModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0d0f1e] p-7 shadow-[0_0_60px_rgba(0,0,0,0.6)]">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-widest text-white/30 mb-1">Edit Subject</div>
+                <h3 className="text-lg font-black text-white">{editWeeksModal.name}</h3>
+              </div>
+              <button onClick={() => setEditWeeksModal(null)} className="text-white/30 hover:text-white/70 text-2xl leading-none">×</button>
+            </div>
+
+            <p className="mb-4 text-xs text-white/40 leading-relaxed">
+              Adjust the total number of weeks for this subject. You cannot go below{" "}
+              <span className="font-bold text-white">{editWeeksModal.completedCount}</span> — your completed packs are protected.
+            </p>
+
+            <div className="mb-4">
+              <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-white/30">Total Weeks</label>
+              <input
+                type="number"
+                min={editWeeksModal.completedCount || 1}
+                max={52}
+                value={editWeeksValue}
+                onChange={e => { setEditWeeksValue(e.target.value); setEditWeeksError(""); }}
+                className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white focus:border-indigo-400/50 focus:outline-none"
+              />
+              {editWeeksModal.completedCount > 0 && (
+                <p className="mt-1.5 text-[11px] text-white/30">Minimum: {editWeeksModal.completedCount} (completed packs)</p>
+              )}
+            </div>
+
+            {editWeeksError && (
+              <p className="mb-3 rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-400">
+                {editWeeksError}
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <button onClick={() => setEditWeeksModal(null)}
+                className="rounded-xl border border-white/10 px-4 py-3 text-sm font-bold text-white/40 transition hover:bg-white/5">
+                Cancel
+              </button>
+              <button onClick={saveEditWeeks} disabled={editWeeksSaving}
+                className="flex-1 rounded-xl bg-indigo-500 py-3 text-sm font-black text-white transition hover:bg-indigo-400 disabled:opacity-40">
+                {editWeeksSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Translation modal ── */}
       {translateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
