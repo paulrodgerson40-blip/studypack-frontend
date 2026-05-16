@@ -183,7 +183,7 @@ export default function PricingPage() {
             {[
               { step: "1", title: "Upload your lecture", body: "PDF, DOCX, PPTX or TXT — up to 4 files, 5MB each." },
               { step: "2", title: "AI builds your pack", body: "30–38 pages of tutor grade notes, hotspots, model answers and more." },
-              { step: "3", title: "Download instantly", body: "1 credit is deducted. Your pack is ready in 2–3 minutes." },
+              { step: "3", title: "Download instantly", body: "1 credit is deducted. Your pack is ready in 2–4 minutes." },
             ].map(({ step, title, body }) => (
               <div key={step} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                 <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500/20 text-sm font-black text-indigo-300">
