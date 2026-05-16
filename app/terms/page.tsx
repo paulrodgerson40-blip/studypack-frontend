@@ -39,6 +39,7 @@ export default function TermsPage() {
             <section>
               <h2 className="mb-3 text-lg font-black text-white">5. Uploaded content</h2>
               <p>You retain full ownership of any content you upload to StudyPack.ai. By uploading content, you grant us a limited licence to process that content solely for the purpose of generating your study pack. We do not share, sell, or use your uploaded content to train AI models. Uploaded files are deleted from our servers after processing.</p>
+              <p className="mt-3">You are responsible for ensuring you have the right to upload any material to StudyPack.ai. By uploading content, you confirm that it is your own material or material you are permitted to use, and that you are using it for your personal study purposes only. StudyPack.ai processes uploaded content solely to generate original study notes — we do not reproduce, redistribute or publish your source material. Academic institutions may have their own policies regarding lecture recordings and transcripts; it is your responsibility to ensure your use complies with those policies.</p>
             </section>
 
             <section>
