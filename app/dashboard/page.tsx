@@ -24,7 +24,6 @@ type Translation = {
   target_language: string;
   language_name: string;
   status: string;
-  translated_json_url: string | null;
   translated_pdf_url: string | null;
 };
 
@@ -177,7 +176,12 @@ function DashboardInner() {
     const res = await fetch(`/api/translate?job_id=${job_id}`);
     if (!res.ok) return;
     const data = await res.json();
-    const completed = (data.translations || []).filter((t: Translation) => t.status === "complete");
+    const completed = (data.translations || [])
+      .filter((t: Translation) => t.status === "complete")
+      .map((t: Translation) => ({
+        ...t,
+        translated_pdf_url: t.translated_pdf_url ? `/api/translate/download?id=${t.id}` : null,
+      }));
     setPackTranslations(prev => ({ ...prev, [job_id]: completed }));
   }
 

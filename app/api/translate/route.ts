@@ -446,9 +446,12 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     translations: (translations || []).map(t => ({
-      ...t,
-      translated_json_url: t.translated_json_path ? `${SPACES_BASE_URL}/${t.translated_json_path}` : null,
+      id: t.id,
+      target_language: t.target_language,
+      language_name: t.language_name,
+      status: t.status,
       translated_pdf_url: t.translated_pdf_path ? `${SPACES_BASE_URL}/${t.translated_pdf_path}` : null,
+      created_at: t.created_at,
     })),
   });
 }
