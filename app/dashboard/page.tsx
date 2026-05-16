@@ -656,11 +656,10 @@ function DashboardInner() {
                                 </svg>
                                 Done
                               </span>
-                              {pack.master_pdf_path ? (
+                              {pack.job_id ? (
                                 <a
-                                  href={API_BASE + pack.master_pdf_path}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                  href={`/api/studypack/download/${pack.job_id}?version=premium`}
+                                  download
                                   className="flex items-center gap-1 rounded-lg bg-white/10 px-2 py-1 text-[10px] font-bold text-white transition hover:bg-white/20 active:scale-95"
                                 >
                                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
