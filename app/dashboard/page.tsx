@@ -604,12 +604,10 @@ function DashboardInner() {
                             {pack.job_id && (
                               <button
                                 onClick={() => openTranslateModal(pack, w)}
-                                className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-2 py-1.5 text-[10px] font-bold text-indigo-300 transition hover:bg-indigo-500/20 active:scale-95"
+                                className="mt-2 flex w-full flex-col items-center justify-center rounded-lg border border-violet-400/40 bg-gradient-to-r from-violet-500/20 to-indigo-500/20 px-2 py-2 text-center transition hover:from-violet-500/30 hover:to-indigo-500/30 hover:border-violet-400/60 active:scale-95"
                               >
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                  <path d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/>
-                                </svg>
-                                + Language
+                                <span className="text-[10px] font-black text-violet-300">🌐 Translate Pack</span>
+                                <span className="text-[9px] text-violet-300/60 leading-tight">17 languages · 1 credit</span>
                               </button>
                             )}
                           </div>
